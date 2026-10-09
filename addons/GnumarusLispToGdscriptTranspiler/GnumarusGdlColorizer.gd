@@ -37,8 +37,9 @@ const ANNOTATION_COLOR: Color = Color(1.0, 0.65, 0.3)
 const NUMBER_COLOR: Color = Color(0.75, 0.9, 0.6)
 ## Unbalanced closer and lone "@" color.
 const ERROR_COLOR: Color = Color(1.0, 0.25, 0.25)
-## Indent darkening factor over the rainbow hues.
-const INDENT_DARKEN: float = 0.6
+## Indent darkening factor over the rainbow hues (lower is more visible;
+## whitespace glyphs are thin, so this stays bright enough to read).
+const INDENT_DARKEN: float = 0.25
 
 
 ## Operation names for keyword classification (live transpiler table).
