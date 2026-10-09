@@ -17,6 +17,28 @@ Legenda: `[x]` feito, `[ ]` pendente/futuro.
 - [x] 11. Validacao — importar o projeto headless, rodar o TestRunner e checar `--check-only` nos `.gd` gerados/esperados.
 - [x] 12. Documentacao — comentarios `##`/`#` em toda classe, funcao e variavel.
 
+## Revisao v3.3 — highlighter rainbow `.gdl`
+
+- [x] 113. `GnumarusGdlColorizer` (scanner posicional: rainbow por profundidade, `)` solto em vermelho, indent por largura, strings/keywords/`@`/numeros; keywords da tabela viva).
+- [x] 114. `GnumarusGdlHighlighter` (`EditorSyntaxHighlighter`, auto-select por `gdl`, memo por hash) + registro no plugin (reabrir arquivos antigos).
+- [x] 115. Bateria `_test_highlighter` (profundidades, carry entre linhas, escapes, erros); indent visivel com View Whitespace.
+- [x] 116. Revalidar: TestRunner 0 falhas + `--check-only` nos `.gd` (inclui colorizer/highlighter).
+
+## Revisao v3.2 — watcher sidecar (troca o import plugin)
+
+- [x] 108. Remover `GnumarusGdlImport*` (import plugin era a ferramenta errada: destino sempre `.godot/imported`).
+- [x] 109. `GnumarusLispPluginImpl` observador: `filesystem_changed` + item manual, `transpile_sidecars` (hash de conteudo, so reescreve se mudou, `GENERATED`, orfao fica, anti-spam de falha, `force` p/ transitivo).
+- [x] 110. Auto-add de `gdl` em `textfile_extensions` ao ativar (persiste no exit; `.gdl` abre como texto, sem parsing GDScript).
+- [x] 111. Bateria `_test_watcher` (round-trip, quietude, reedicao, falha, orfao, raiz ausente); sem ligar no `project.godot` (fixtures quebrados).
+- [x] 112. Revalidar: TestRunner 0 falhas + `--check-only` nos `.gd` (inclui plugin/impl).
+
+## Revisao v3.1 — EditorImportPlugin `.gdl` (addon de verdade)
+
+- [x] 104. Regra nova do AGENTS.md: proxies burros (`GnumarusGdlImport`, `GnumarusLispPlugin`) + impls `RefCounted` (`GnumarusGdlImportImpl`, `GnumarusLispPluginImpl`) + `plugin.cfg`.
+- [x] 105. Importer `gnumarus.gdl`: extensao `gdl`, saida `gd`, tipo `Script`, 1 preset; `_import` transpila e escreve (OK / ERR_FILE_NOT_FOUND / ERR_PARSE_ERROR / ERR_CANT_CREATE).
+- [x] 106. Bateria `_test_import_plugin` (metadados via proxy, round-trip em `./tmp`, falhas, wiring do plugin); sem ligar no `project.godot` (fixtures quebrados de proposito poluiriam o import).
+- [x] 107. Revalidar: TestRunner 0 falhas + `--check-only` nos `.gd` (inclui proxies/impls) + ativacao temporaria provando o `plugin.cfg`.
+
 ## Revisao v2.6 — `template-set`/`tvar`/`when`
 
 - [x] 101. Env plano no expansor (set expande e liga, tvar cola, when/when-not sequenciais, so `""`/`"false"` falsos).

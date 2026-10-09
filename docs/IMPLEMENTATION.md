@@ -341,6 +341,32 @@ Entrada Lisp que gera o exemplo pedido (`tests/Test1.gdl`):
 3. **Mais operacoes**: literais, `if`, `for`, `while`, `return`, chamadas,
    argumentos tipados, trailing comments genericos.
 
+## 9. Addon de editor (v3.2: watcher sidecar; v3.1 import plugin removido)
+
+O import plugin (v3.1) era a ferramenta errada: o destino do `_import` e
+sempre `.godot/imported`, e o `type="Script"` fazia o editor abrir `.gdl`
+como GDScript (cores + falsos erros). Trocado por observador: o impl do
+plugin conecta `filesystem_changed` e oferece item manual no menu Project,
+transpilando cada `.gdl` para um irmao `.gd` ao lado da fonte. So
+transpila com hash de conteudo novo (sem relogio: imune a granularidade
+de `mtime`); so reescreve com conteudo diferente; carimba `GENERATED ... DO
+NOT EDIT`; falha com `push_error` e so retenta se a fonte mudar; fonte
+deletada deixa o orfao. Edicao em include/pai nao retriggera dependentes
+(item manual força tudo). Ao ativar, adiciona `gdl` em
+`docks/filesystem/textfile_extensions` (persiste no exit): `.gdl` abre
+como texto puro — sem parsing GDScript. Nao ligado no `project.godot`
+deste repo (fixtures de erro dariam spam a cada scan).
+
+Highlighter (v3.3): `GnumarusGdlColorizer` (`RefCounted` puro, testavel)
+varre o documento e devolve mapas `{coluna: {"color"}}` — rainbow por
+profundidade de parenteses, `)` desbalanceado em vermelho, bloco de indent
+por largura (escurecido; so aparece com View Whitespace ligado), spans
+empacotados como string, ops como keyword (lista viva do transpiler),
+`@` como anotacao (`@` solto em vermelho) e int/float como numero.
+`GnumarusGdlHighlighter` (`EditorSyntaxHighlighter`, auto-select por `gdl`,
+memo por hash do texto) registrado no plugin; arquivos abertos antes do
+registro precisam reabrir.
+
 ## 8. Alternativas consideradas
 
 - **Comentario trailing via keyword** (`(func _ready () :comment "x" ...)`):

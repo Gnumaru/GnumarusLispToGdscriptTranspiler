@@ -28,6 +28,15 @@ const INCLUDES_DIR: String = "res://addons/GnumarusLispToGdscriptTranspiler/test
 const TEMPLATES_DIR: String = "res://addons/GnumarusLispToGdscriptTranspiler/tests/templates"
 ## Directory holding the macro fixture (pair) for end-to-end coverage.
 const MACROS_DIR: String = "res://addons/GnumarusLispToGdscriptTranspiler/tests/macros"
+## Lisp editor plugin proxy script, loaded by path (parse guard: proxies
+## only instantiate inside the editor).
+const LispPluginScript = preload("res://addons/GnumarusLispToGdscriptTranspiler/GnumarusLispPlugin.gd")
+## Lisp editor plugin implementation script, loaded by path.
+const PluginImplScript = preload("res://addons/GnumarusLispToGdscriptTranspiler/GnumarusLispPluginImpl.gd")
+## Gdl colorizer script, loaded by path (pure coloring logic).
+const ColorizerScript = preload("res://addons/GnumarusLispToGdscriptTranspiler/GnumarusGdlColorizer.gd")
+## Gdl highlighter script, loaded by path (editor wrapper).
+const HighlighterScript = preload("res://addons/GnumarusLispToGdscriptTranspiler/GnumarusGdlHighlighter.gd")
 
 ## Count of passing checks.
 var _passed: int = 0
@@ -63,6 +72,8 @@ func _init() -> void:
 	_test_macros()
 	_test_generate()
 	_test_set_when()
+	_test_watcher()
+	_test_highlighter()
 	_test_end_to_end()
 	_test_transpiler_errors()
 	print("--------------------------------------------------")
@@ -1064,6 +1075,100 @@ func _test_set_when() -> void:
 		# One dangling form transpiled directly.
 		var rdang: Dictionary = transpiler2.transpile([dangling])
 		_check("setwhen dangling: fails", rdang["ok"] == false, str(rdang))
+
+
+## Tests of the sidecar watcher through the plugin implementation (null
+## proxy: the core takes explicit paths, editor wiring stays unwired).
+## Covers collection, sibling generation with stamp header, change-only
+## rewrites, failure handling with retry guards and orphan retention.
+func _test_watcher() -> void:
+	# Watcher implementation without editor (null proxy, core only).
+	var watcher: RefCounted = PluginImplScript.new(null)
+	# Probe source with known content in ./tmp.
+	var src: String = "res://tmp/watch_probe.gdl"
+	var dst: String = "res://tmp/watch_probe.gd"
+	var probe: FileAccess = FileAccess.open(src, FileAccess.WRITE)
+	probe.store_string("(class-name WatchProbe)\n(extends Node)\n(var w = 7)\n")
+	probe.close()
+	# First run writes the stamped sibling.
+	var r1: Dictionary = watcher.transpile_sidecars("res://tmp")
+	_check("watcher: updated", (r1["updated"] as Array) == [dst], str(r1))
+	_check_eq("watcher: content", FileAccess.get_file_as_string(dst), "# GENERATED FROM watch_probe.gdl BY GNUMARUS - DO NOT EDIT\nclass_name WatchProbe\nextends Node\nvar w = 7\n")
+	# Second run changes nothing (content hashes, no rewrite).
+	var r2: Dictionary = watcher.transpile_sidecars("res://tmp")
+	_check("watcher: quiet", (r2["updated"] as Array).is_empty() and (r2["failed"] as Array).is_empty(), str(r2))
+	# Edited source regenerates the sibling.
+	var edit: FileAccess = FileAccess.open(src, FileAccess.WRITE)
+	edit.store_string("(class-name WatchProbe)\n(extends Node)\n(var w = 8)\n")
+	edit.close()
+	var r3: Dictionary = watcher.transpile_sidecars("res://tmp")
+	_check("watcher: reupdated", (r3["updated"] as Array) == [dst], str(r3))
+	_check("watcher: new content", FileAccess.get_file_as_string(dst).contains("var w = 8"), FileAccess.get_file_as_string(dst))
+	# Broken source fails without touching the good sibling.
+	var bad: FileAccess = FileAccess.open(src, FileAccess.WRITE)
+	bad.store_string("(nope bar)\n")
+	bad.close()
+	var r4: Dictionary = watcher.transpile_sidecars("res://tmp")
+	_check("watcher: failed", (r4["failed"] as Array) == [src], str(r4))
+	_check("watcher: sibling kept", FileAccess.get_file_as_string(dst).contains("var w = 8"), FileAccess.get_file_as_string(dst))
+	# Same broken hash is not reported twice (spam guard).
+	var r5: Dictionary = watcher.transpile_sidecars("res://tmp")
+	_check("watcher: guarded", (r5["failed"] as Array).is_empty(), str(r5))
+	# Deleted source leaves its orphan sibling behind.
+	DirAccess.remove_absolute(src)
+	var r6: Dictionary = watcher.transpile_sidecars("res://tmp")
+	_check("watcher: orphan kept", FileAccess.file_exists(dst), "orphan sibling removed")
+	DirAccess.remove_absolute(dst)
+	# Missing root reports nothing to do (no crash).
+	var r7: Dictionary = watcher.transpile_sidecars("res://tmp/no_such_dir")
+	_check("watcher: missing root", (r7["updated"] as Array).is_empty() and (r7["failed"] as Array).is_empty(), str(r7))
+
+
+## Tests of Gnumarus source coloring: rainbow depths, indent levels,
+## strings, keywords, annotations, numbers, errors and state carrying.
+func _test_highlighter() -> void:
+	# Color engine without editor (pure data logic).
+	var colorizer: RefCounted = ColorizerScript.new()
+	# Rainbow depths on one line (matchers share the opener hue).
+	var maps: Array = colorizer.compute_all(PackedStringArray(["(func f (x) (pass))"]))
+	_check_eq("highlight open depth", maps[0][0]["color"], ColorizerScript.RAINBOW_COLORS[0])
+	_check_eq("highlight nested depth", maps[0][8]["color"], ColorizerScript.RAINBOW_COLORS[1])
+	_check_eq("highlight matcher depth", maps[0][10]["color"], ColorizerScript.RAINBOW_COLORS[1])
+	_check_eq("highlight inner close", maps[0][17]["color"], ColorizerScript.RAINBOW_COLORS[1])
+	_check_eq("highlight close depth", maps[0][18]["color"], ColorizerScript.RAINBOW_COLORS[0])
+	# Keywords color, unknown atoms keep the theme default (no entry).
+	_check_eq("highlight keyword", maps[0][1]["color"], ColorizerScript.KEYWORD_COLOR)
+	_check("highlight plain atom", not maps[0].has(6), str(maps[0].keys()))
+	# Indented line: indent block plus depth-zero parens.
+	var indented: Array = colorizer.compute_all(PackedStringArray(["  (var x)"]))
+	_check_eq("highlight indent", indented[0][0]["color"], ColorizerScript.RAINBOW_COLORS[2].darkened(ColorizerScript.INDENT_DARKEN))
+	_check_eq("highlight indent paren", indented[0][2]["color"], ColorizerScript.RAINBOW_COLORS[0])
+	# Unbalanced closers glow error red.
+	var unbalanced: Array = colorizer.compute_all(PackedStringArray(["(a))"]))
+	_check_eq("highlight unbalanced", unbalanced[0][3]["color"], ColorizerScript.ERROR_COLOR)
+	# Packed spans color whole, escapes never close early.
+	var strings: Array = colorizer.compute_all(PackedStringArray(["(comment \"a\\\"b c\")"]))
+	for c in [9, 10, 11, 12, 13, 14, 15]:
+		_check_eq("highlight string " + str(c), strings[0][c]["color"], ColorizerScript.STRING_COLOR)
+	# Annotations and numbers classify, lone @ errors.
+	var special: Array = colorizer.compute_all(PackedStringArray(["(var @export n = 42)"]))
+	_check_eq("highlight annotation", special[0][5]["color"], ColorizerScript.ANNOTATION_COLOR)
+	_check_eq("highlight number", special[0][17]["color"], ColorizerScript.NUMBER_COLOR)
+	var lone: Array = colorizer.compute_all(PackedStringArray(["(var @ n)"]))
+	_check_eq("highlight lone at", lone[0][5]["color"], ColorizerScript.ERROR_COLOR)
+	# Depth and string state carry across lines (closer mid-line resumes).
+	# Line depths: "(func f" opens 1; "(comment" opens 2; the "(pass))"
+	# line therefore opens at 2 and shuts 3->2->1.
+	var carried: Array = colorizer.compute_all(PackedStringArray(["(func f", "  (comment \"a", "b\" trailing", "(pass))"]))
+	_check_eq("highlight carried depth", carried[1][2]["color"], ColorizerScript.RAINBOW_COLORS[1])
+	_check_eq("highlight carried closer", carried[2][1]["color"], ColorizerScript.STRING_COLOR)
+	_check("highlight resumed atom", not carried[2].has(3), str(carried[2].keys()))
+	_check_eq("highlight resumed paren", carried[3][0]["color"], ColorizerScript.RAINBOW_COLORS[2])
+	_check_eq("highlight resumed close", carried[3][6]["color"], ColorizerScript.RAINBOW_COLORS[1])
+	# NOTE: GnumarusGdlHighlighter itself only instantiates inside the editor
+	# (engine rule for editor-virtual classes, like the proxies), so the thin
+	# wrapper (name/langs/factory/memo) is covered by preload parse plus review;
+	# all coloring logic above runs through the plain RefCounted colorizer.
 
 
 ## End to end tests: .gdl -> code identical to the expected .gd.

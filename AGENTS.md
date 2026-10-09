@@ -1,4 +1,5 @@
 
+- nunca faca operacoes de escrita do git como checkout, commit ou push. apenas operacoes de leitura como status ou log.
 - converse comigo apenas em portugues. faça as documentacoes de planejamento apenas em portugues. faça todo o resto (codigo, nomes de arquivos, diretorios, codigo, comentarios) apenas em ingles.
 - estamos em um ambiente grafico linux ubuntu 26.04 x86_64 com wayland e gnome, em um terminal bash. você não tem poderes de sudo então se precisar que eu faça qualquer coisa como sudo me avise que eu faço
 - se precisar de um executavel do godot temos um em /sync/opt/godot/godot4.x86_64
@@ -11,6 +12,7 @@
 - todas as funcoes e classes implementadas devem ser testaveis. para tudo que implementarmos precisamos criar testes para garantir o correto fucionamento e evitar regressoes. os arquivos de teste devem ser criados em addons/GnumarusLispToGdscriptTranspiler/tests, como por exemplo um arquivo de entrada contendo codigo lisp (Test1.gdl) e um arquivo da saida esperada contendo gdscript (Test1.gd)
 - tudo deve ser documentado. toda classe, funcao e variavel deve ter um comentario explicando seu proposito
 - todo desenvolvimento deve ser planejado e ter artefatos no diretorio docs. deve haver um arquivo de planejamento (IMPLEMENTATION.md): Um arquivo ou artefato em formato Markdown que detalha a arquitetura, os componentes, os arquivos que serão criados ou modificados, e a descrição técnica do que será implementado. e deve haver um arquivo de lista de tarefas (CHECKLIST.MD): enumeração sequencial dos passos que os agentes autônomos planejam executar (pesquisa, estrutura inicial, código core, interface e testes) antes de começar a codificar
+- toda classe de editor (como editorplugin ou editorimportplugin) tem que ser um proxy burro. a implementacao real fica em uma outra classe refcounted instanciada no init da classe de editor e que recebe no construtor uma referencia do proxy para caso precise chamar metodos dele. todas as funcoes implementadas pelo proxy apenas delegam para metodos identicos da classe de implementacao.
 
 - estamos criando um addon feito em gdscript puro e sem dependencias para a game engine godot na versao 4.7.2 que implementa um transpilador lisp, que recebe como entrada um texto lisp ou um path de um arquivo de texto lisp e gera como saida uma string que poderia ser salva em um arquivo gdscript valido
 - este transpilador é meramente sintatico, ele nao valida semantica, não assume nada sobre runtime e nem pode ser interpretado ou ter recursos de runtime, é apenas um transpilador sintatico extensivel por meio de macros.
