@@ -1,0 +1,22 @@
+(class-name MatchDemo)
+(extends Node)
+(func describe (x)
+  (match "x"
+    (branch "1"
+      (return "\"one\""))
+    (branch "2, 3"
+      (return "\"few\""))
+    (branch "[var a, var b]"
+      (return a))
+    (branch "{\"name\": var n}"
+      (return n))
+    (branch "_"
+      (return "\"other\""))))
+(func nested (v)
+  (match "v"
+    (branch "_"
+      (match "v"
+        (branch "0"
+          (return 0))
+        (branch "_"
+          (return -1))))))

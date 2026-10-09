@@ -1,0 +1,7 @@
+(class-name MyClass)
+(extends Node)
+(var a)
+(var b int)
+(comment "comentario1")
+(var c float = 0.0)
+(func _ready () (comment "comentario2") (pass))

@@ -1,0 +1,2 @@
+(include "diamond/left.gdl")
+(include "diamond/right.gdl")

@@ -1,0 +1,6 @@
+(extends Node)
+(block imports
+  (comment "default imports"))
+(func _ready ()
+  (block body
+    (pass)))

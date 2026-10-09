@@ -1,0 +1,8 @@
+(class-name LambdaDemo)
+(extends Node)
+(var handler = (lambda (msg) (return msg)))
+(func run ()
+  (var local_cb = (lambda (x) (return x)))
+  (return local_cb))
+(func make_greeter ()
+  (return (lambda (name) (comment "hello") (return name))))

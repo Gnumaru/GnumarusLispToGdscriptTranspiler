@@ -1,0 +1,5 @@
+(template-extends "parent.gdl")
+(block imports
+  (comment "child imports"))
+(block body
+  (call print "\"hi\""))

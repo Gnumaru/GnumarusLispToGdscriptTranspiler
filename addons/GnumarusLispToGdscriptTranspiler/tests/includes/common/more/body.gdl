@@ -1,0 +1,2 @@
+(comment "from body")
+(include "../note.gdl")

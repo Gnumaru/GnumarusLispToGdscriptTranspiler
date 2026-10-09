@@ -1,0 +1,3 @@
+(template-extends "nope_parent.gdl")
+(block imports
+  (pass))

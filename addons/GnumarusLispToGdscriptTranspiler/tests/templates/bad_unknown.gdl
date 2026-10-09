@@ -1,0 +1,3 @@
+(template-extends "parent.gdl")
+(block nosuch
+  (pass))

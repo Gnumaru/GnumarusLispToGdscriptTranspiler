@@ -1,0 +1,2 @@
+(template-extends "parent.gdl")
+(var stray = 1)

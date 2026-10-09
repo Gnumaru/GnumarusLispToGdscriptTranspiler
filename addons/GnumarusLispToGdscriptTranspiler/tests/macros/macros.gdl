@@ -1,0 +1,16 @@
+(defmacro safe-call (obj mname ...args)
+  (if (and obj (call (join obj ".has_method") (join "\"" mname "\"")))
+    (call (join obj "." mname) ...args)))
+
+(defmacro unless (cond body)
+  (if (not cond) body))
+
+(class-name MacroDemo)
+(extends Node)
+(func greet (name)
+  (safe-call name greet "\"hi\"")
+  (unless (== name "\"\"") (call print name))
+  (pass))
+(func silent (node)
+  (safe-call node stop)
+  (pass))

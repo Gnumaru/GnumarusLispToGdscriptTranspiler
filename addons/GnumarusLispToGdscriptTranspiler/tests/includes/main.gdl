@@ -1,0 +1,7 @@
+(class-name IncludeDemo)
+(extends Node)
+(include "common/vars.gdl")
+(include "common/more/body.gdl")
+(func _ready ()
+  (include "common/ready_body.gdl")
+  (pass))

@@ -1,0 +1,2 @@
+(var cb = 2)
+(include "cycle_a.gdl")

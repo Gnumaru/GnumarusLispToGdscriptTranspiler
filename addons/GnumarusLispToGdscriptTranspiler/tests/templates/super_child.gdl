@@ -1,0 +1,4 @@
+(template-extends "parent.gdl")
+(block body
+  (super)
+  (call print "\"hi\""))
