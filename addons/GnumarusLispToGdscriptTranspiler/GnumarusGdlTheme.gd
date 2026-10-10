@@ -23,6 +23,7 @@ const SETTING_KEYS: Dictionary = {
 	"global_function": "text_editor/theme/highlighting/gdscript/global_function_color",
 	"function": "text_editor/theme/highlighting/function_color",
 	"comment": "text_editor/theme/highlighting/comment_color",
+	"text": "text_editor/theme/highlighting/text_color",
 }
 ## Dark-theme fallback color per category (editor_settings.cpp defaults).
 const DEFAULT_COLORS: Dictionary = {
@@ -36,6 +37,7 @@ const DEFAULT_COLORS: Dictionary = {
 	"global_function": Color(0.64, 0.64, 0.96),
 	"function": Color(0.4, 0.64, 0.81),
 	"comment": Color(0.4, 0.4, 0.4),
+	"text": Color(0.67, 0.67, 0.67),
 }
 ## GDScript control-flow keywords (is_control_flow_keyword in gdscript.cpp).
 const CONTROL_FLOW_KEYWORDS: Array = [

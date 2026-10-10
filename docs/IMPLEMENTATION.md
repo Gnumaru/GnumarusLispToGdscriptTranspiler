@@ -374,7 +374,10 @@ hash de texto + hash de tema) sincroniza de `EditorSettings`
 (`sync_theme`, no-op headless; reinscreve em `settings_changed`) e
 `GnumarusGdlHighlighter` e proxy burro (excecao documentada: `_create`
 precisa retornar `EditorSyntaxHighlighter`, o que o `RefCounted` nao pode
-construir).
+construir). Vao entre atomos usa o cinza `text` (`text_color`), entao
+nenhuma cor vaza para a direita; atomos com `-` interior fatiam por
+segmento (`static-var` pinta `static`, o separador e `var`; `-` inicial
+nunca fatia, `-5` segue numero).
 
 ## 8. Alternativas consideradas
 

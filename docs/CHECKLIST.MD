@@ -17,6 +17,12 @@ Legenda: `[x]` feito, `[ ]` pendente/futuro.
 - [x] 11. Validacao — importar o projeto headless, rodar o TestRunner e checar `--check-only` nos `.gd` gerados/esperados.
 - [x] 12. Documentacao — comentarios `##`/`#` em toda classe, funcao e variavel.
 
+## Revisao v3.6 — sem vazamento + hifen fatiado
+
+- [x] 124. Categoria `text` (`text_color`) + preenchimento dos vaos em `compute_all`: nenhuma cor vaza para a direita.
+- [x] 125. `_paint_hyphenated` (so `-` interior; `-5` intacto; `=` e nomes no cinza texto, sem tocar em `.`/`/`).
+- [x] 126. Checks de vao, fatiamento (`static-var`, `class-name`, `when-not`) e negativo; TestRunner 738/738 + `--check-only`.
+
 ## Revisao v3.5 — watcher ignora fixtures do addon
 
 - [x] 122. `ADDON_TESTS_ROOT` + poda em `_collect_gdl_in`: salvar `.gdl` com o plugin ativo nao reescreve (nem carimba) os `.gd` esperados dos testes.

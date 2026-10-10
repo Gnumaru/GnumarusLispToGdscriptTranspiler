@@ -130,6 +130,8 @@ func theme_hash() -> int:
 ## Order mirrors the GDScript highlighter: annotations, control flow,
 ## get/set functions, plain keywords, global functions, base types, engine
 ## types, Gnumarus-only operations (keyword fallback), then numbers.
+## Whole-word class: hyphenated operations report their dominant class here
+## while the display (see _paint_atom) splits their sub-words.
 func category_for_atom(p_word: String) -> String:
 	# Lone "@" is an error like in the transpiler (handled by the caller).
 	if p_word == "@":
@@ -180,6 +182,8 @@ func compute_all(p_lines: PackedStringArray) -> Array:
 	var closing: int = 0
 	# Active string color (synced from the theme).
 	var string_color: Color = get_color("string")
+	# Default gray for gaps and classless segments (synced from the theme).
+	var text_color: Color = get_color("text")
 	for li in range(p_lines.size()):
 		# Current source line under coloring.
 		var line: String = p_lines[li]
@@ -257,6 +261,12 @@ func compute_all(p_lines: PackedStringArray) -> Array:
 				atom_start = i
 			i += 1
 		_paint_atom(map, line, atom_start, line.length())
+		# Unpainted columns (gaps between atoms) take the text gray, so no
+		# color leaks right into the next segment (the editor stretches each
+		# entry until the following one, like the GDScript highlighter).
+		for c in range(line.length()):
+			if not map.has(c):
+				map[c] = {"color": text_color}
 		maps.append(map)
 	return maps
 
@@ -267,15 +277,53 @@ func _rainbow(p_depth: int) -> Color:
 
 
 ## Classifies one bare atom range [p_start, p_end) inside its line.
-## No-op for empty ranges and for theme-default words.
+## Hyphenated atoms split on interior "-" (static-var paints static, the
+## separator and var separately); other ranges classify whole. Ranges with
+## no class keep the map entry empty for the gap filler in compute_all.
 func _paint_atom(p_map: Dictionary, p_line: String, p_start: int, p_end: int) -> void:
 	if p_start < 0 or p_end <= p_start:
 		return
 	# Raw atom text of the range.
 	var text: String = p_line.substr(p_start, p_end - p_start)
+	if _has_interior_hyphen(text):
+		_paint_hyphenated(p_map, p_start, text)
+		return
 	# Display color, transparent when the theme default applies.
 	var color: Color = color_for_atom(text)
 	if color == Color(0, 0, 0, 0):
 		return
 	for c in range(p_start, p_end):
 		p_map[c] = {"color": color}
+
+
+## Tells whether an atom splits on "-" (any hyphen past the first column,
+## so leading hyphens like the "-5" number stay whole).
+func _has_interior_hyphen(p_text: String) -> bool:
+	return p_text.contains("-") and not p_text.begins_with("-")
+
+
+## Paints one hyphenated atom, classifying each segment on its own while
+## every "-" separator takes the text gray (classless segments too, so the
+## whole range resolves without relying on the gap filler).
+func _paint_hyphenated(p_map: Dictionary, p_start: int, p_text: String) -> void:
+	# Text gray for separators and classless segments.
+	var text_color: Color = get_color("text")
+	# Start offset of the segment in progress inside the atom.
+	var seg_start: int = 0
+	# Scan one past the end to flush the trailing segment.
+	var i: int = 0
+	while i <= p_text.length():
+		if i == p_text.length() or p_text.substr(i, 1) == "-":
+			if i > seg_start:
+				# Raw text of the finished segment.
+				var segment: String = p_text.substr(seg_start, i - seg_start)
+				# Segment color, text gray when it has no class.
+				var color: Color = color_for_atom(segment)
+				if color == Color(0, 0, 0, 0):
+					color = text_color
+				for c in range(p_start + seg_start, p_start + i):
+					p_map[c] = {"color": color}
+			if i < p_text.length():
+				p_map[p_start + i] = {"color": text_color}
+			seg_start = i + 1
+		i += 1

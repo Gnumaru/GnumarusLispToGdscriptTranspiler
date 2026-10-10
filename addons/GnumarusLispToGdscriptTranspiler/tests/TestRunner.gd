@@ -1155,7 +1155,7 @@ func _test_highlighter() -> void:
 	_check_eq("highlight keyword class_name", colorizer.color_for_atom("class_name"), defaults["keyword"])
 	_check_eq("highlight keyword operator", colorizer.color_for_atom("and"), defaults["keyword"])
 	_check_eq("highlight keyword value", colorizer.color_for_atom("true"), defaults["keyword"])
-	_check("highlight plain atom", not maps[0].has(6), str(maps[0].keys()))
+	_check_eq("highlight plain color", maps[0][6]["color"], defaults["text"])
 	_check_eq("highlight plain category", colorizer.category_for_atom("my_var"), "")
 	# Control-flow keywords keep their own red, Gnumarus extras included.
 	_check_eq("highlight control if", colorizer.category_for_atom("if"), "control_flow")
@@ -1202,6 +1202,30 @@ func _test_highlighter() -> void:
 	_check_eq("highlight line engine type", extends_line[0][9]["color"], defaults["engine_type"])
 	# Lowercase array is the Gnumarus operation, not the GDScript type.
 	_check_eq("highlight array op", colorizer.category_for_atom("array"), "keyword")
+	# No color leaks right: gaps between atoms use the text gray.
+	var gap: Array = colorizer.compute_all(PackedStringArray(["(static-var instance_count int = 0)"]))
+	_check_eq("highlight gap head", gap[0][1]["color"], defaults["keyword"])
+	_check_eq("highlight gap hyphen", gap[0][7]["color"], defaults["text"])
+	_check_eq("highlight gap tail", gap[0][8]["color"], defaults["keyword"])
+	_check_eq("highlight gap space", gap[0][11]["color"], defaults["text"])
+	_check_eq("highlight gap name", gap[0][12]["color"], defaults["text"])
+	_check_eq("highlight gap int", gap[0][27]["color"], defaults["base_type"])
+	_check_eq("highlight gap equals", gap[0][31]["color"], defaults["text"])
+	_check_eq("highlight gap zero", gap[0][33]["color"], defaults["number"])
+	# Hyphenated atoms split per segment (class-name, when-not).
+	var split_cls: Array = colorizer.compute_all(PackedStringArray(["(class-name C)"]))
+	_check_eq("highlight split class", split_cls[0][1]["color"], defaults["keyword"])
+	_check_eq("highlight split hyphen", split_cls[0][6]["color"], defaults["text"])
+	_check_eq("highlight split name", split_cls[0][7]["color"], defaults["text"])
+	var split_when: Array = colorizer.compute_all(PackedStringArray(["(when-not x (pass))"]))
+	_check_eq("highlight split when", split_when[0][1]["color"], defaults["control_flow"])
+	_check_eq("highlight split when hyphen", split_when[0][5]["color"], defaults["text"])
+	_check_eq("highlight split not", split_when[0][6]["color"], defaults["keyword"])
+	# Leading hyphens never split ("-5" stays one number).
+	var neg: Array = colorizer.compute_all(PackedStringArray(["(-5)"]))
+	_check_eq("highlight negative sign", neg[0][1]["color"], defaults["number"])
+	_check_eq("highlight negative digit", neg[0][2]["color"], defaults["number"])
+	_check_eq("highlight text default", defaults["text"], Color(0.67, 0.67, 0.67))
 	# Fallbacks match the Godot dark-theme defaults byte for byte.
 	_check_eq("highlight default keyword", defaults["keyword"], Color(1.0, 1.0, 0.7))
 	_check_eq("highlight default control", defaults["control_flow"], Color(1.0, 0.85, 0.7))
@@ -1251,7 +1275,7 @@ func _test_highlighter() -> void:
 	var carried: Array = colorizer.compute_all(PackedStringArray(["(func f", "  (comment \"a", "b\" trailing", "(pass))"]))
 	_check_eq("highlight carried depth", carried[1][2]["color"], ColorizerScript.RAINBOW_COLORS[1])
 	_check_eq("highlight carried closer", carried[2][1]["color"], defaults["string"])
-	_check("highlight resumed atom", not carried[2].has(3), str(carried[2].keys()))
+	_check_eq("highlight resumed atom", carried[2][3]["color"], defaults["text"])
 	_check_eq("highlight resumed paren", carried[3][0]["color"], ColorizerScript.RAINBOW_COLORS[2])
 	_check_eq("highlight resumed close", carried[3][6]["color"], ColorizerScript.RAINBOW_COLORS[1])
 	# Highlighter implementation without editor (null proxy: no TextEdit,
