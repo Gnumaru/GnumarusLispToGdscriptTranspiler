@@ -14,6 +14,9 @@ extends RefCounted
 const ColorizerScript = preload("res://addons/GnumarusLispToGdscriptTranspiler/GnumarusGdlColorizer.gd")
 ## Theme script, loaded by path (setting keys).
 const ThemeScript = preload("res://addons/GnumarusLispToGdscriptTranspiler/GnumarusGdlTheme.gd")
+## Highlighter display version (bumped when the coloring rules change, so
+## the script editor dropdown tells which rules are actually running).
+const HIGHLIGHTER_VERSION: String = "3.6"
 
 
 ## Proxy owning this implementation (editor calls go through it).
@@ -36,9 +39,10 @@ func _init(p_proxy: Object) -> void:
 	_colorizer = ColorizerScript.new()
 
 
-## Display name shown in the editor highlighter menu.
+## Display name shown in the editor highlighter menu (versioned, so the
+## dropdown tells which coloring rules are actually running).
 func _get_name() -> String:
-	return "Gnumarus"
+	return "Gnumarus " + HIGHLIGHTER_VERSION
 
 
 ## Extensions auto-selecting this highlighter (matched against the file

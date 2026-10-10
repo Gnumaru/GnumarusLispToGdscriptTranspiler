@@ -377,7 +377,10 @@ precisa retornar `EditorSyntaxHighlighter`, o que o `RefCounted` nao pode
 construir). Vao entre atomos usa o cinza `text` (`text_color`), entao
 nenhuma cor vaza para a direita; atomos com `-` interior fatiam por
 segmento (`static-var` pinta `static`, o separador e `var`; `-` inicial
-nunca fatia, `-5` segue numero).
+nunca fatia, `-5` segue numero). Mapas saem com chaves em ordem ascendente
+de coluna: o loop de desenho do `TextEdit` percorre as entradas em ordem
+de insercao e para na primeira chave maior (v3.7; sem isso os vaos
+preenchidos por ultimo vazavam na tela mesmo com o mapa correto).
 
 ## 8. Alternativas consideradas
 

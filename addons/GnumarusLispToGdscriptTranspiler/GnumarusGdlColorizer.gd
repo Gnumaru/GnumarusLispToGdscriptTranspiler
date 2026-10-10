@@ -267,7 +267,16 @@ func compute_all(p_lines: PackedStringArray) -> Array:
 		for c in range(line.length()):
 			if not map.has(c):
 				map[c] = {"color": text_color}
-		maps.append(map)
+		# Reinserted in ascending column order: the engine draw loop walks
+		# entries in insertion order and stops at the first greater key
+		# (see TextEdit drawing), so out-of-order keys would leak colors.
+		var ordered: Dictionary = {}
+		# All painted columns of this line, sorted ascending.
+		var cols: Array = map.keys()
+		cols.sort()
+		for c in cols:
+			ordered[c] = map[c]
+		maps.append(ordered)
 	return maps
 
 

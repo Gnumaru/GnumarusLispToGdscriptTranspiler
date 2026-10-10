@@ -1133,6 +1133,20 @@ func _test_watcher() -> void:
 	_check("watcher: forced skip", (r8["updated"] as Array).is_empty() and (r8["failed"] as Array).is_empty(), str(r8))
 
 
+## Replicates the engine draw walk over one line map: entries apply in
+## insertion order and the scan stops at the first greater key (see the
+## TextEdit drawing loop), so this catches order bugs that key lookups miss.
+func _engine_color(p_map: Dictionary, p_col: int, p_default: Color) -> Color:
+	# Rendered color walking the entries in order.
+	var color: Color = p_default
+	for key in p_map:
+		if (key as int) <= p_col:
+			color = (p_map[key] as Dictionary)["color"]
+		else:
+			break
+	return color
+
+
 ## Tests of Gnumarus source coloring: rainbow depths, indent levels,
 ## strings, GDScript word classes (keyword vs control flow, base and engine
 ## types, global functions, get/set, annotations), numbers, errors, theme
@@ -1212,6 +1226,16 @@ func _test_highlighter() -> void:
 	_check_eq("highlight gap int", gap[0][27]["color"], defaults["base_type"])
 	_check_eq("highlight gap equals", gap[0][31]["color"], defaults["text"])
 	_check_eq("highlight gap zero", gap[0][33]["color"], defaults["number"])
+	# Rendered colors follow the engine draw walk (insertion order, stop at
+	# the first greater key): entries must come out in ascending columns.
+	_check_eq("highlight rendered keyword", _engine_color(gap[0], 1, Color.MAGENTA), defaults["keyword"])
+	_check_eq("highlight rendered gap", _engine_color(gap[0], 11, Color.MAGENTA), defaults["text"])
+	_check_eq("highlight rendered name", _engine_color(gap[0], 12, Color.MAGENTA), defaults["text"])
+	_check_eq("highlight rendered int", _engine_color(gap[0], 27, Color.MAGENTA), defaults["base_type"])
+	_check_eq("highlight rendered equals", _engine_color(gap[0], 31, Color.MAGENTA), defaults["text"])
+	_check_eq("highlight rendered zero", _engine_color(gap[0], 33, Color.MAGENTA), defaults["number"])
+	_check_eq("highlight rendered hyphen", _engine_color(gap[0], 7, Color.MAGENTA), defaults["text"])
+	_check_eq("highlight rendered tail", _engine_color(gap[0], 8, Color.MAGENTA), defaults["keyword"])
 	# Hyphenated atoms split per segment (class-name, when-not).
 	var split_cls: Array = colorizer.compute_all(PackedStringArray(["(class-name C)"]))
 	_check_eq("highlight split class", split_cls[0][1]["color"], defaults["keyword"])
@@ -1281,7 +1305,7 @@ func _test_highlighter() -> void:
 	# Highlighter implementation without editor (null proxy: no TextEdit,
 	# theme sync stays a no-op and line queries come back empty).
 	var impl: RefCounted = HighlighterImplScript.new(null)
-	_check_eq("highlight impl name", impl._get_name(), "Gnumarus")
+	_check_eq("highlight impl name", impl._get_name(), "Gnumarus 3.6")
 	_check_eq("highlight impl langs", impl._get_supported_languages(), PackedStringArray(["gdl"]))
 	_check("highlight impl no editor", impl._get_line_syntax_highlighting(0).is_empty(), "")
 	impl.sync_theme()

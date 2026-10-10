@@ -17,11 +17,17 @@ Legenda: `[x]` feito, `[ ]` pendente/futuro.
 - [x] 11. Validacao — importar o projeto headless, rodar o TestRunner e checar `--check-only` nos `.gd` gerados/esperados.
 - [x] 12. Documentacao — comentarios `##`/`#` em toda classe, funcao e variavel.
 
+## Revisao v3.7 — ordem das entradas (contrato do TextEdit)
+
+- [x] 128. Mapas com chaves ascendentes: o desenho percorre em ordem de insercao e para na primeira chave maior — vaos anexados por ultimo vazavam na tela com o mapa "correto" (causa dos vazamentos pos-v3.6).
+- [x] 129. `_engine_color` no runner replica o loop do motor (controle negativo executado: 3 falhas sem o fix); diagnostico temporario via arquivo usado e removido; TestRunner 746/746 + `--check-only`.
+
 ## Revisao v3.6 — sem vazamento + hifen fatiado
 
 - [x] 124. Categoria `text` (`text_color`) + preenchimento dos vaos em `compute_all`: nenhuma cor vaza para a direita.
 - [x] 125. `_paint_hyphenated` (so `-` interior; `-5` intacto; `=` e nomes no cinza texto, sem tocar em `.`/`/`).
 - [x] 126. Checks de vao, fatiamento (`static-var`, `class-name`, `when-not`) e negativo; TestRunner 738/738 + `--check-only`.
+- [x] 127. Nome do highlighter versionado (`Gnumarus 3.6`, via `HIGHLIGHTER_VERSION`) para o dropdown do editor dizer qual regra esta ativa.
 
 ## Revisao v3.5 — watcher ignora fixtures do addon
 
