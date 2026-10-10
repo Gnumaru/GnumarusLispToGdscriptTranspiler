@@ -1,73 +1,45 @@
-## Gnumarus syntax highlighter for `.gdl` sources in the Godot editor.
+## Dumb editor proxy for the Gnumarus `.gdl` syntax highlighter.
 ##
-## Registered with the script editor by the addon (auto-selected for the
-## `gdl` extension): rainbow parens, indent levels, strings, keywords,
-## annotations and numbers via GnumarusGdlColorizer. Thin by design —
-## per-line results memoize per document hash, so full scans run once per
-## text state and line queries stay O(segments). Reopened files pick it up
-## automatically; files opened before registration need a reopen.
+## Per the addon rule, this class holds no logic: it instantiates
+## GnumarusGdlHighlighterImpl in _init (passing itself) and every function
+## below only delegates to the identically-named implementation method.
+## The single exception is _create: the engine requires an
+## EditorSyntaxHighlighter instance and the RefCounted implementation cannot
+## satisfy that return type, so the one-line factory lives here.
 @tool
 class_name GnumarusGdlHighlighter
 extends EditorSyntaxHighlighter
 
 
-## Colorizer script, loaded by path.
-const ColorizerScript = preload("res://addons/GnumarusLispToGdscriptTranspiler/GnumarusGdlColorizer.gd")
+## Implementation script, loaded by path.
+const ImplScript = preload("res://addons/GnumarusLispToGdscriptTranspiler/GnumarusGdlHighlighterImpl.gd")
 
 
-## Stateless color engine (built in _init, shared by every line query).
-var _colorizer: RefCounted
-## Document hash of the memoized color maps (-1 = nothing cached).
-var _cache_hash: int = -1
-## Memoized per-line color maps for the cached document.
-var _cache_maps: Array = []
+## Real implementation (built in _init, kept alive by this reference).
+var _impl: RefCounted
 
 
-## Constructor: builds the shared colorizer.
+## Constructor: builds the implementation with a reference to this proxy.
 func _init() -> void:
-	_colorizer = ColorizerScript.new()
+	_impl = ImplScript.new(self)
 
 
-## Display name shown in the editor highlighter menu.
+## Display name shown in the editor highlighter menu (delegated).
 func _get_name() -> String:
-	return "Gnumarus"
+	return _impl._get_name()
 
 
-## Extensions auto-selecting this highlighter (matched against the file
-## extension for non-script resources like plain-text `.gdl`).
+## Extensions auto-selecting this highlighter (delegated).
 func _get_supported_languages() -> PackedStringArray:
-	return PackedStringArray(["gdl"])
+	return _impl._get_supported_languages()
 
 
-## Per-editor instance factory (the editor clones one copy per open file).
+## Per-editor instance factory (must return an EditorSyntaxHighlighter,
+## which the RefCounted implementation cannot construct).
 func _create() -> EditorSyntaxHighlighter:
 	return GnumarusGdlHighlighter.new()
 
 
-## Colors one line for the editor (empty without an attached TextEdit,
-## which also keeps headless use safe). Memoizes per document hash.
+## Colors one line for the editor (delegated).
 func _get_line_syntax_highlighting(p_line: int) -> Dictionary:
-	# Hosting text editor (null outside the editor).
-	var te: TextEdit = get_text_edit()
-	if te == null:
-		return {}
-	if p_line < 0 or p_line >= te.get_line_count():
-		return {}
-	_ensure_cache(te)
-	if p_line < _cache_maps.size():
-		return _cache_maps[p_line]
-	return {}
-
-
-## Recomputes the memo when the document text moved, else reuses it.
-func _ensure_cache(p_te: TextEdit) -> void:
-	# Hash of the current document text.
-	var h: int = p_te.get_text().hash()
-	if h == _cache_hash:
-		return
-	_cache_hash = h
-	# Exact line list (avoids split/count mismatches on trailing newlines).
-	var lines := PackedStringArray()
-	for i in range(p_te.get_line_count()):
-		lines.append(p_te.get_line(i))
-	_cache_maps = _colorizer.compute_all(lines)
+	return _impl._get_line_syntax_highlighting(p_line)

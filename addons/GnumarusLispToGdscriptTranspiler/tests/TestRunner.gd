@@ -35,8 +35,10 @@ const LispPluginScript = preload("res://addons/GnumarusLispToGdscriptTranspiler/
 const PluginImplScript = preload("res://addons/GnumarusLispToGdscriptTranspiler/GnumarusLispPluginImpl.gd")
 ## Gdl colorizer script, loaded by path (pure coloring logic).
 const ColorizerScript = preload("res://addons/GnumarusLispToGdscriptTranspiler/GnumarusGdlColorizer.gd")
-## Gdl highlighter script, loaded by path (editor wrapper).
-const HighlighterScript = preload("res://addons/GnumarusLispToGdscriptTranspiler/GnumarusGdlHighlighter.gd")
+## Gdl theme script, loaded by path (fallback colors and word lists).
+const ThemeScript = preload("res://addons/GnumarusLispToGdscriptTranspiler/GnumarusGdlTheme.gd")
+## Gdl highlighter implementation script, loaded by path.
+const HighlighterImplScript = preload("res://addons/GnumarusLispToGdscriptTranspiler/GnumarusGdlHighlighterImpl.gd")
 
 ## Count of passing checks.
 var _passed: int = 0
@@ -1125,10 +1127,14 @@ func _test_watcher() -> void:
 
 
 ## Tests of Gnumarus source coloring: rainbow depths, indent levels,
-## strings, keywords, annotations, numbers, errors and state carrying.
+## strings, GDScript word classes (keyword vs control flow, base and engine
+## types, global functions, get/set, annotations), numbers, errors, theme
+## injection and state carrying.
 func _test_highlighter() -> void:
 	# Color engine without editor (pure data logic).
 	var colorizer: RefCounted = ColorizerScript.new()
+	# Fallback colors (Godot dark-theme defaults).
+	var defaults: Dictionary = ThemeScript.DEFAULT_COLORS
 	# Rainbow depths on one line (matchers share the opener hue).
 	var maps: Array = colorizer.compute_all(PackedStringArray(["(func f (x) (pass))"]))
 	_check_eq("highlight open depth", maps[0][0]["color"], ColorizerScript.RAINBOW_COLORS[0])
@@ -1136,9 +1142,84 @@ func _test_highlighter() -> void:
 	_check_eq("highlight matcher depth", maps[0][10]["color"], ColorizerScript.RAINBOW_COLORS[1])
 	_check_eq("highlight inner close", maps[0][17]["color"], ColorizerScript.RAINBOW_COLORS[1])
 	_check_eq("highlight close depth", maps[0][18]["color"], ColorizerScript.RAINBOW_COLORS[0])
-	# Keywords color, unknown atoms keep the theme default (no entry).
-	_check_eq("highlight keyword", maps[0][1]["color"], ColorizerScript.KEYWORD_COLOR)
+	# Plain GDScript keywords share the keyword color (context-free).
+	_check_eq("highlight keyword", maps[0][1]["color"], defaults["keyword"])
+	_check_eq("highlight keyword atom", colorizer.color_for_atom("var"), defaults["keyword"])
+	_check_eq("highlight keyword class_name", colorizer.color_for_atom("class_name"), defaults["keyword"])
+	_check_eq("highlight keyword operator", colorizer.color_for_atom("and"), defaults["keyword"])
+	_check_eq("highlight keyword value", colorizer.color_for_atom("true"), defaults["keyword"])
 	_check("highlight plain atom", not maps[0].has(6), str(maps[0].keys()))
+	_check_eq("highlight plain category", colorizer.category_for_atom("my_var"), "")
+	# Control-flow keywords keep their own red, Gnumarus extras included.
+	_check_eq("highlight control if", colorizer.category_for_atom("if"), "control_flow")
+	_check_eq("highlight control while", colorizer.category_for_atom("while"), "control_flow")
+	_check_eq("highlight control return", colorizer.category_for_atom("return"), "control_flow")
+	_check_eq("highlight control match", colorizer.category_for_atom("match"), "control_flow")
+	_check_eq("highlight control branch", colorizer.category_for_atom("branch"), "control_flow")
+	_check_eq("highlight control for-generate", colorizer.category_for_atom("for-generate"), "control_flow")
+	_check_eq("highlight control when-not", colorizer.category_for_atom("when-not"), "control_flow")
+	_check_eq("highlight control color", colorizer.color_for_atom("if"), defaults["control_flow"])
+	var flow: Array = colorizer.compute_all(PackedStringArray(["(if x (pass))"]))
+	_check_eq("highlight control line", flow[0][1]["color"], defaults["control_flow"])
+	# Gnumarus-only operations fall back to the keyword color.
+	_check_eq("highlight gdl defmacro", colorizer.category_for_atom("defmacro"), "keyword")
+	_check_eq("highlight gdl join", colorizer.category_for_atom("join"), "keyword")
+	_check_eq("highlight gdl class-name", colorizer.category_for_atom("class-name"), "keyword")
+	_check_eq("highlight gdl dict-lua", colorizer.category_for_atom("dict-lua"), "keyword")
+	_check_eq("highlight gdl call", colorizer.category_for_atom("call"), "keyword")
+	# get/set use the function color, like the GDScript highlighter.
+	_check_eq("highlight get category", colorizer.category_for_atom("get"), "function")
+	_check_eq("highlight set category", colorizer.category_for_atom("set"), "function")
+	_check_eq("highlight get color", colorizer.color_for_atom("get"), defaults["function"])
+	# Global functions share the global-function color.
+	_check_eq("highlight global assert", colorizer.category_for_atom("assert"), "global_function")
+	_check_eq("highlight global print", colorizer.category_for_atom("print"), "global_function")
+	_check_eq("highlight global range", colorizer.category_for_atom("range"), "global_function")
+	_check_eq("highlight global lerp", colorizer.category_for_atom("lerp"), "global_function")
+	_check_eq("highlight global color", colorizer.color_for_atom("print"), defaults["global_function"])
+	# Base types and every engine class map to their GDScript colors.
+	_check_eq("highlight base int", colorizer.category_for_atom("int"), "base_type")
+	_check_eq("highlight base String", colorizer.category_for_atom("String"), "base_type")
+	_check_eq("highlight base Array", colorizer.category_for_atom("Array"), "base_type")
+	_check_eq("highlight base void", colorizer.category_for_atom("void"), "base_type")
+	_check_eq("highlight base color", colorizer.color_for_atom("int"), defaults["base_type"])
+	_check_eq("highlight engine Node", colorizer.category_for_atom("Node"), "engine_type")
+	_check_eq("highlight engine Node3D", colorizer.category_for_atom("Node3D"), "engine_type")
+	_check_eq("highlight engine Resource", colorizer.category_for_atom("Resource"), "engine_type")
+	_check_eq("highlight engine color", colorizer.color_for_atom("Node"), defaults["engine_type"])
+	var typed: Array = colorizer.compute_all(PackedStringArray(["(var n int = 5)"]))
+	_check_eq("highlight line keyword", typed[0][1]["color"], defaults["keyword"])
+	_check_eq("highlight line base type", typed[0][7]["color"], defaults["base_type"])
+	_check_eq("highlight line number", typed[0][13]["color"], defaults["number"])
+	var extends_line: Array = colorizer.compute_all(PackedStringArray(["(extends Node)"]))
+	_check_eq("highlight line engine type", extends_line[0][9]["color"], defaults["engine_type"])
+	# Lowercase array is the Gnumarus operation, not the GDScript type.
+	_check_eq("highlight array op", colorizer.category_for_atom("array"), "keyword")
+	# Fallbacks match the Godot dark-theme defaults byte for byte.
+	_check_eq("highlight default keyword", defaults["keyword"], Color(1.0, 1.0, 0.7))
+	_check_eq("highlight default control", defaults["control_flow"], Color(1.0, 0.85, 0.7))
+	_check_eq("highlight default base", defaults["base_type"], Color(0.64, 1.0, 0.83))
+	_check_eq("highlight default engine", defaults["engine_type"], Color(0.51, 0.83, 1.0))
+	_check_eq("highlight default string", defaults["string"], Color(0.94, 0.43, 0.75))
+	_check_eq("highlight default number", defaults["number"], Color(0.92, 0.58, 0.2))
+	_check_eq("highlight default annotation", defaults["annotation"], Color(1.0, 0.7, 0.45))
+	_check_eq("highlight default global", defaults["global_function"], Color(0.64, 0.64, 0.96))
+	_check_eq("highlight default function", defaults["function"], Color(0.4, 0.64, 0.81))
+	# Theme injection swaps colors, moves the theme hash and validates input.
+	var before_hash: int = colorizer.theme_hash()
+	var custom: Dictionary = {"keyword": Color(0.1, 0.2, 0.3), "control_flow": Color(0.4, 0.5, 0.6)}
+	var rok: Dictionary = colorizer.configure(custom)
+	_check("highlight configure: ok", rok["ok"] == true, str(rok))
+	_check_eq("highlight configure: keyword", colorizer.color_for_atom("var"), Color(0.1, 0.2, 0.3))
+	_check_eq("highlight configure: control", colorizer.color_for_atom("if"), Color(0.4, 0.5, 0.6))
+	_check_eq("highlight configure: untouched", colorizer.color_for_atom("int"), defaults["base_type"])
+	_check("highlight configure: hash moved", colorizer.theme_hash() != before_hash, "")
+	var bad_key: Dictionary = colorizer.configure({"nope": Color.WHITE})
+	_check("highlight configure: bad key", bad_key["ok"] == false, str(bad_key))
+	_check_eq("highlight configure: kept keyword", colorizer.color_for_atom("var"), Color(0.1, 0.2, 0.3))
+	var bad_value: Dictionary = colorizer.configure({"keyword": "red"})
+	_check("highlight configure: bad value", bad_value["ok"] == false, str(bad_value))
+	_check_eq("highlight configure: kept anyway", colorizer.color_for_atom("var"), Color(0.1, 0.2, 0.3))
 	# Indented line: indent block plus depth-zero parens.
 	var indented: Array = colorizer.compute_all(PackedStringArray(["  (var x)"]))
 	_check_eq("highlight indent", indented[0][0]["color"], ColorizerScript.RAINBOW_COLORS[2].darkened(ColorizerScript.INDENT_DARKEN))
@@ -1149,11 +1230,12 @@ func _test_highlighter() -> void:
 	# Packed spans color whole, escapes never close early.
 	var strings: Array = colorizer.compute_all(PackedStringArray(["(comment \"a\\\"b c\")"]))
 	for c in [9, 10, 11, 12, 13, 14, 15]:
-		_check_eq("highlight string " + str(c), strings[0][c]["color"], ColorizerScript.STRING_COLOR)
+		_check_eq("highlight string " + str(c), strings[0][c]["color"], defaults["string"])
 	# Annotations and numbers classify, lone @ errors.
 	var special: Array = colorizer.compute_all(PackedStringArray(["(var @export n = 42)"]))
-	_check_eq("highlight annotation", special[0][5]["color"], ColorizerScript.ANNOTATION_COLOR)
-	_check_eq("highlight number", special[0][17]["color"], ColorizerScript.NUMBER_COLOR)
+	_check_eq("highlight annotation", special[0][5]["color"], defaults["annotation"])
+	_check_eq("highlight annotation atom", colorizer.color_for_atom("@export"), defaults["annotation"])
+	_check_eq("highlight number", special[0][17]["color"], defaults["number"])
 	var lone: Array = colorizer.compute_all(PackedStringArray(["(var @ n)"]))
 	_check_eq("highlight lone at", lone[0][5]["color"], ColorizerScript.ERROR_COLOR)
 	# Depth and string state carry across lines (closer mid-line resumes).
@@ -1161,14 +1243,22 @@ func _test_highlighter() -> void:
 	# line therefore opens at 2 and shuts 3->2->1.
 	var carried: Array = colorizer.compute_all(PackedStringArray(["(func f", "  (comment \"a", "b\" trailing", "(pass))"]))
 	_check_eq("highlight carried depth", carried[1][2]["color"], ColorizerScript.RAINBOW_COLORS[1])
-	_check_eq("highlight carried closer", carried[2][1]["color"], ColorizerScript.STRING_COLOR)
+	_check_eq("highlight carried closer", carried[2][1]["color"], defaults["string"])
 	_check("highlight resumed atom", not carried[2].has(3), str(carried[2].keys()))
 	_check_eq("highlight resumed paren", carried[3][0]["color"], ColorizerScript.RAINBOW_COLORS[2])
 	_check_eq("highlight resumed close", carried[3][6]["color"], ColorizerScript.RAINBOW_COLORS[1])
+	# Highlighter implementation without editor (null proxy: no TextEdit,
+	# theme sync stays a no-op and line queries come back empty).
+	var impl: RefCounted = HighlighterImplScript.new(null)
+	_check_eq("highlight impl name", impl._get_name(), "Gnumarus")
+	_check_eq("highlight impl langs", impl._get_supported_languages(), PackedStringArray(["gdl"]))
+	_check("highlight impl no editor", impl._get_line_syntax_highlighting(0).is_empty(), "")
+	impl.sync_theme()
+	_check("highlight impl sync headless", impl._get_line_syntax_highlighting(0).is_empty(), "")
 	# NOTE: GnumarusGdlHighlighter itself only instantiates inside the editor
 	# (engine rule for editor-virtual classes, like the proxies), so the thin
-	# wrapper (name/langs/factory/memo) is covered by preload parse plus review;
-	# all coloring logic above runs through the plain RefCounted colorizer.
+	# proxy (name/langs/factory/memo) is covered by preload parse plus review;
+	# all coloring logic above runs through plain RefCounted classes.
 
 
 ## End to end tests: .gdl -> code identical to the expected .gd.

@@ -1,4 +1,3 @@
-# GENERATED FROM Test6.gdl BY GNUMARUS - DO NOT EDIT
 class_name LambdaDemo
 extends Node
 var handler = func(msg):

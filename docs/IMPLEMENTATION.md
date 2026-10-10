@@ -357,15 +357,21 @@ deletada deixa o orfao. Edicao em include/pai nao retriggera dependentes
 como texto puro — sem parsing GDScript. Nao ligado no `project.godot`
 deste repo (fixtures de erro dariam spam a cada scan).
 
-Highlighter (v3.3): `GnumarusGdlColorizer` (`RefCounted` puro, testavel)
-varre o documento e devolve mapas `{coluna: {"color"}}` — rainbow por
-profundidade de parenteses, `)` desbalanceado em vermelho, bloco de indent
-por largura (escurecido; so aparece com View Whitespace ligado), spans
-empacotados como string, ops como keyword (lista viva do transpiler),
-`@` como anotacao (`@` solto em vermelho) e int/float como numero.
-`GnumarusGdlHighlighter` (`EditorSyntaxHighlighter`, auto-select por `gdl`,
-memo por hash do texto) registrado no plugin; arquivos abertos antes do
-registro precisam reabrir.
+Highlighter (v3.4): `GnumarusGdlTheme` (`RefCounted` puro, so dados)
+congela as listas e cores padrao do GDScript 4.7.2 (keywords separadas em
+`keyword`/`control_flow`, tipos base, `get`/`set` com cor de funcao, funcoes
+globais, anotacoes; vermelho de erro constante, sem chave de tema).
+`GnumarusGdlColorizer` classifica cada atomo sem contexto pela mesma cor do
+GDScript (`category_for_atom`/`color_for_atom` publicos e testaveis;
+`configure` injeta cores e `theme_hash` distingue troca de tema de edicao
+de texto); tipos da engine via `ClassDB` ao vivo, ops so-Gnumarus caem no
+keyword pela tabela viva, rainbow de parenteses e indent mantidos.
+`GnumarusGdlHighlighterImpl` (`RefCounted`, dono do colorizer + memo por
+hash de texto + hash de tema) sincroniza de `EditorSettings`
+(`sync_theme`, no-op headless; reinscreve em `settings_changed`) e
+`GnumarusGdlHighlighter` e proxy burro (excecao documentada: `_create`
+precisa retornar `EditorSyntaxHighlighter`, o que o `RefCounted` nao pode
+construir).
 
 ## 8. Alternativas consideradas
 

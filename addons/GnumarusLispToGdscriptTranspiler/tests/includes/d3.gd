@@ -1,2 +1,1 @@
-# GENERATED FROM d3.gdl BY GNUMARUS - DO NOT EDIT
 # depth three

@@ -17,6 +17,14 @@ Legenda: `[x]` feito, `[ ]` pendente/futuro.
 - [x] 11. Validacao — importar o projeto headless, rodar o TestRunner e checar `--check-only` nos `.gd` gerados/esperados.
 - [x] 12. Documentacao — comentarios `##`/`#` em toda classe, funcao e variavel.
 
+## Revisao v3.4 — highlighter com as cores do GDScript
+
+- [x] 117. `GnumarusGdlTheme` (listas e cores padrao do GDScript 4.7.2: keyword/controle separados, base, get/set, globais, anotacoes).
+- [x] 118. `GnumarusGdlColorizer` com `category_for_atom`/`color_for_atom`/`configure`/`theme_hash`; engine via `ClassDB`, fallback keyword pela tabela viva, rainbow mantido.
+- [x] 119. `GnumarusGdlHighlighterImpl` (memo texto+tema, `sync_theme` de `EditorSettings`, no-op headless) + `GnumarusGdlHighlighter` como proxy burro (excecao `_create` documentada).
+- [x] 120. Bateria `_test_highlighter` ampliada (categorias, defaults byte a byte, injecao via `configure`, impl com proxy nulo); 24 fixtures restaurados (linha de carimbo removida) apos contaminacao por watcher.
+- [x] 121. Revalidar: TestRunner 719/719 + `--check-only` nos `.gd` tocados.
+
 ## Revisao v3.3 — highlighter rainbow `.gdl`
 
 - [x] 113. `GnumarusGdlColorizer` (scanner posicional: rainbow por profundidade, `)` solto em vermelho, indent por largura, strings/keywords/`@`/numeros; keywords da tabela viva).
