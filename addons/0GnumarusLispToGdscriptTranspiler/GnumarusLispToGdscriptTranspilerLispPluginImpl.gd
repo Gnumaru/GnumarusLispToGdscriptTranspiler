@@ -185,9 +185,17 @@ func _refresh_editor(p_updated: Array) -> void:
 	var filesystem: EditorFileSystem = _editor_filesystem()
 	if filesystem == null:
 		return
-	# Written siblings pushed one by one (instant dock/editor refresh).
+	# Written siblings pushed one by one (instant dock refresh).
 	for dst in p_updated:
 		filesystem.update_file(dst)
+	# Open editors only re-check on focus/tab/save, never on filesystem
+	# signals: ask the script editor to re-check now (honors the
+	# auto-reload setting, exactly like returning focus does).
+	var iface = _editor_interface()
+	if iface != null:
+		var script_editor = iface.get_script_editor()
+		if script_editor != null and script_editor.has_method("reload_open_files"):
+			script_editor.reload_open_files()
 	# Writes within one window share a single fallback scan.
 	if _refresh_pending:
 		return
@@ -233,14 +241,19 @@ func _editor_tree() -> SceneTree:
 	return _proxy.get_tree() as SceneTree
 
 
-## Returns the resource filesystem through the proxy (null when unwired).
-func _editor_filesystem() -> EditorFileSystem:
+## Returns the editor interface through the proxy (null when unwired).
+func _editor_interface():
 	if _proxy == null or not is_instance_valid(_proxy):
 		return null
 	if not _proxy.has_method("get_editor_interface"):
 		return null
+	return _proxy.get_editor_interface()
+
+
+## Returns the resource filesystem through the proxy (null when unwired).
+func _editor_filesystem() -> EditorFileSystem:
 	# Editor interface behind the proxy (null outside the editor).
-	var iface = _proxy.get_editor_interface()
+	var iface = _editor_interface()
 	if iface == null:
 		return null
 	return iface.get_resource_filesystem() as EditorFileSystem

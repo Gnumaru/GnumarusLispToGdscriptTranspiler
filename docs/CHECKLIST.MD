@@ -17,6 +17,11 @@ Legenda: `[x]` feito, `[ ]` pendente/futuro.
 - [x] 11. Validacao — importar o projeto headless, rodar o TestRunner e checar `--check-only` nos `.gd` gerados/esperados.
 - [x] 12. Documentacao — comentarios `##`/`#` em toda classe, funcao e variavel.
 
+## Revisao v3.18 — re-check de editores abertos
+
+- [x] 150. `reload_open_files()` apos escrever: editores abertos so re-checam em foco/aba/save, nunca em sinais — agora re-checam no save (mudo com auto-reload, dialogo sem; confirmado em editor).
+- [x] 151. Diagnostico temporario removido; TestRunner 815/815 + `--check-only`.
+
 ## Revisao v3.17 — update_file em vez de scan (raiz do bug dos dois saves)
 
 - [x] 148. Causa: `st_mtime` em segundos + scan pula diretorios com mtime igual — escrita no mesmo segundo fica invisivel; `update_file` por irmao (sincrono, novos e alterados) + scan diferido de rede.

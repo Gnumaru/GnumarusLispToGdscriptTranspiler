@@ -360,7 +360,8 @@ cada irmao via `update_file` (sincrono, novos e alterados — scan puro
 cega no mesmo segundo: `st_mtime` tem precisao de segundos e diretorios
 com mtime igual sao pulados) com scan diferido de rede para pastas
 desconhecidas; carimba
-`GENERATED ... DO NOT EDIT`; falha com `push_error` e so retenta se a
+`GENERATED ... DO NOT EDIT`; editores abertos re-checam via
+`reload_open_files()` (mudo com auto-reload, dialogo sem); falha com `push_error` e so retenta se a
 fonte mudar; fonte deletada deixa o orfao. Edicao em include/pai nao retriggera dependentes
 (item manual força tudo). Ao ativar, adiciona `gdl` em
 `docks/filesystem/textfile_extensions` (persiste no exit): `.gdl` abre
