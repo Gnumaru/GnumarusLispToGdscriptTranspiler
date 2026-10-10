@@ -61,6 +61,7 @@ func _init() -> void:
 		"get": Callable(self, "_emit_get_dangling"),
 		"set": Callable(self, "_emit_set_dangling"),
 		"call": Callable(self, "_emit_call"),
+		"chain": Callable(self, "_emit_chain"),
 		"+": Callable(self, "_emit_infix_statement"),
 		"-": Callable(self, "_emit_infix_statement"),
 		"*": Callable(self, "_emit_infix_statement"),
@@ -1256,7 +1257,7 @@ func _emit_when_not_dangling(p_form: Array, _p_indent: int, _p_context: String) 
 	return _fail("when-not is evaluated before transpiling (nothing should reach here)")
 
 
-## Tells whether a form is a call, await, ternary or infix/logic expression.
+## Tells whether a form is a call, chain, await, ternary or infix/logic expression.
 ## Used for operands, call arguments and values. Lambdas and collections are
 ## handled on their own paths. Non-string heads never match — never crash.
 func _is_expression(p_form) -> bool:
@@ -1268,11 +1269,11 @@ func _is_expression(p_form) -> bool:
 	var ehead = (p_form as Array)[0]
 	if not (ehead is String):
 		return false
-	return ehead == "call" or ehead == "await" or ehead == "ternary" or ehead in INFIX_OPS
+	return ehead == "call" or ehead == "chain" or ehead == "await" or ehead == "ternary" or ehead in INFIX_OPS
 
 
 ## Tells whether a nested operand needs parentheses: infix/logic, await and
-## ternary heads (loose binders); calls, collections and atoms never do.
+## ternary heads (loose binders); calls, chains, collections and atoms never do.
 func _needs_parens(p_head: String) -> bool:
 	return p_head in INFIX_OPS or p_head == "await" or p_head == "ternary"
 
@@ -1313,17 +1314,19 @@ func _emit_operand(p_operand, p_paren_infix: bool, p_indent: int) -> Dictionary:
 		return _emit_collection_code(p_operand, p_indent)
 	if _is_lambda(p_operand):
 		return _fail("lambdas cannot nest inside operands, arguments or elements — bind to a var first")
-	return _fail("operand must be a value or a (call ...)/(operator ...)/(collection ...) expression (got '%s')" % str(p_operand))
+	return _fail("operand must be a value or a (call ...)/(chain ...)/(operator ...)/(collection ...) expression (got '%s')" % str(p_operand))
 
 
-## Emits expression code (no leading indentation): call, await, ternary,
-## infix or collection. Single-line except collections, which carry absolute
-## continuation lines. The form must satisfy _is_expression or _is_collection.
+## Emits expression code (no leading indentation): call, chain, await,
+## ternary, infix or collection. Single-line except collections, which carry
+## absolute continuation lines. The form must satisfy _is_expression or _is_collection.
 func _emit_expression_code(p_form: Array, p_indent: int) -> Dictionary:
-	# Expression head: "call", "await", "ternary", infix or collection.
+	# Expression head: "call", "chain", "await", "ternary", infix or collection.
 	var head: String = (p_form as Array)[0]
 	if head == "call":
 		return _emit_call_code(p_form, p_indent)
+	if head == "chain":
+		return _emit_chain_code(p_form, p_indent)
 	if head == "await":
 		return _emit_await_code(p_form, p_indent)
 	if head == "ternary":
@@ -1339,10 +1342,24 @@ func _emit_expression_code(p_form: Array, p_indent: int) -> Dictionary:
 func _emit_call_code(p_form: Array, p_indent: int) -> Dictionary:
 	if p_form.size() < 2:
 		return _fail("usage: (call name args...) — e.g. (call print x)")
-	# Called name (verbatim atom).
+	# Called target: verbatim atom, or a nested expression whose value gets
+	# invoked (e.g. (call (call f x) 1) calls the returned callable).
 	var cname = p_form[1]
-	if not (cname is String) or (cname as String).is_empty():
-		return _fail("call name must be a non-empty string")
+	# Rendered target (loose binders parenthesized, calls/chains already grouped).
+	var target: String = ""
+	if cname is String:
+		if (cname as String).is_empty():
+			return _fail("call target must be a non-empty atom or an expression")
+		target = cname
+	elif _is_expression(cname):
+		var tres: Dictionary = _emit_operand(cname, true, p_indent)
+		if not tres["ok"]:
+			return tres
+		target = tres["code"]
+	elif _is_lambda(cname):
+		return _fail("lambdas cannot nest inside operands, arguments or elements — bind to a var first")
+	else:
+		return _fail("call target must be a non-empty atom or a (call ...)/(chain ...) expression (got '%s')" % str(cname))
 	# Rendered argument list.
 	var rendered: Array = []
 	for arg in (p_form as Array).slice(2):
@@ -1351,7 +1368,7 @@ func _emit_call_code(p_form: Array, p_indent: int) -> Dictionary:
 		if not ares["ok"]:
 			return ares
 		rendered.append(ares["code"])
-	return _ok("%s(%s)" % [cname, ", ".join(rendered)])
+	return _ok("%s(%s)" % [target, ", ".join(rendered)])
 
 
 ## Emits `a OP b ...` from (OP ...): n-ary (+ * and or), binary or more
@@ -1396,6 +1413,50 @@ func _emit_infix_code(p_form: Array, p_indent: int) -> Dictionary:
 func _emit_call(p_form: Array, p_indent: int, _p_context: String) -> Dictionary:
 	# Call code without indentation (always single-line).
 	var r: Dictionary = _emit_call_code(p_form, p_indent)
+	if not r["ok"]:
+		return r
+	return _ok("%s%s" % [_indent_text(p_indent), r["code"]])
+
+
+## Emits `root.link(...).prop` from (chain root links...): each list link
+## appends `.name(args)` and each bare-atom link appends `.name` (property
+## access). Root is a verbatim atom or a nested expression (chains compose
+## in root position); links never nest. Single-line, like call.
+func _emit_chain_code(p_form: Array, p_indent: int) -> Dictionary:
+	if p_form.size() < 3:
+		return _fail("usage: (chain root (method args...)... [prop]...) — e.g. (chain myobj (qwer 0) (asdf 1))")
+	# Chain root: verbatim atom or nested expression (loose binders parenthesized).
+	var root = p_form[1]
+	var rres: Dictionary = _emit_operand(root, true, p_indent)
+	if not rres["ok"]:
+		return rres
+	# Rendered chain, one dot segment per link.
+	var code: String = rres["code"]
+	for link in (p_form as Array).slice(2):
+		if link is String:
+			if (link as String).is_empty():
+				return _fail("chain property must be a non-empty atom")
+			code += "." + link
+		elif (link is Array) and not (link as Array).is_empty() and ((link as Array)[0] is String) and not (((link as Array)[0] as String).is_empty()):
+			# Link method name (verbatim, dotted names pass through).
+			var mname: String = (link as Array)[0]
+			# Rendered link arguments, never wrapped (link parens group).
+			var rendered: Array = []
+			for arg in (link as Array).slice(1):
+				var ares: Dictionary = _emit_operand(arg, false, p_indent)
+				if not ares["ok"]:
+					return ares
+				rendered.append(ares["code"])
+			code += ".%s(%s)" % [mname, ", ".join(rendered)]
+		else:
+			return _fail("chain links must be property atoms or (method args...) lists (got '%s')" % str(link))
+	return _ok(code)
+
+
+## Emits a chained-call statement from (chain ...). Valid at any level.
+func _emit_chain(p_form: Array, p_indent: int, _p_context: String) -> Dictionary:
+	# Chain code without indentation (always single-line).
+	var r: Dictionary = _emit_chain_code(p_form, p_indent)
 	if not r["ok"]:
 		return r
 	return _ok("%s%s" % [_indent_text(p_indent), r["code"]])

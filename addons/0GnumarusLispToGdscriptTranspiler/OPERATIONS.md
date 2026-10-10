@@ -1,6 +1,6 @@
 # OPERATIONS.md — Gnumarus Lisp → GDScript transpiler operations
 
-Reference for all 72 implemented operations: name, description, where
+Reference for all 73 implemented operations: name, description, where
 each form may appear, where using it is invalid, and usage examples with
 the produced GDScript output. Every example below was executed on the
 transpiler (or is a fixture compared byte for byte by the suite).
@@ -463,7 +463,9 @@ Invalid (bare as a statement):
 ### `call` — `(call name args...)`
 
 A `name(a1, a2)` call, as a statement and as a value (nests without
-extra parentheses; `call` never needs them).
+extra parentheses; `call` never needs them). The target may itself be
+an expression, invoking the returned value: `(call (call f x) 1)`
+produces `f(x)(1)`.
 Examples:
 
 ```lisp
@@ -485,8 +487,41 @@ Invalid:
 > `transpiler: usage: (call name args...) — e.g. (call print x)`
 
 - **Where allowed**: statements, values, operands and args.
-- **Where invalid**: without a name; list names; lambdas in args (bind
-  to a `var` first).
+- **Where invalid**: without a name; lambdas in args (bind to a `var`
+  first); collections as targets. Non-atom targets must be expressions:
+  `(call (a) x)` fails.
+
+### `chain` — `(chain root links...)`
+
+A `root.link(...).prop` chain: each list link appends `.name(args)`
+and each bare-atom link appends `.name` (property access). The root is
+a verbatim atom or a nested expression (chains compose in root
+position); links never nest. Statement, value and operand.
+Examples:
+
+```lisp
+(chain myobj (qwer 0) (asdf 1) (zxcv 2))
+(chain o pos x)
+(chain (call f x) (m 1))
+```
+
+```gdscript
+myobj.qwer(0).asdf(1).zxcv(2)
+o.pos.x
+f(x).m(1)
+```
+
+Invalid:
+
+```lisp
+(chain o)
+```
+
+> `transpiler: usage: (chain root (method args...)... [prop]...) — e.g. (chain myobj (qwer 0) (asdf 1))`
+
+- **Where allowed**: statements, values and operands.
+- **Where invalid**: without links; empty links; empty root or property;
+  malformed link shapes.
 
 ### `get` / `set` — trailing accessors of `var`/`static-var`
 

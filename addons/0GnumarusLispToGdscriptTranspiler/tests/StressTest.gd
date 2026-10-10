@@ -177,3 +177,7 @@ class Shape:
 # grave packed
 # acute packed
 # a "quoted" word
+func chain_demo(o):
+	var r = o.qwer(0).asdf(1)
+	print(r)
+	return o.zx(2).tail

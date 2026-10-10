@@ -17,6 +17,11 @@ Legenda: `[x]` feito, `[ ]` pendente/futuro.
 - [x] 11. Validacao — importar o projeto headless, rodar o TestRunner e checar `--check-only` nos `.gd` gerados/esperados.
 - [x] 12. Documentacao — comentarios `##`/`#` em toda classe, funcao e variavel.
 
+## Revisao v3.13 — `chain` + alvos-call aninhados
+
+- [x] 140. Nova operacao `chain` (`(chain raiz elos...)`, elos-metodo e elos-propriedade com atomo nu, raiz aninhavel; statement, valor e operando) + alvos `call` como expressoes (invocacao do retorno); raiz/elos no `_is_value_slot`.
+- [x] 141. Bateria `_test_chain` + exemplo no `StressTest` (byte a byte); 73 operacoes; OPERATIONS.md + tabela do IMPLEMENTATION.md; TestRunner 803/803 + `--check-only`.
+
 ## Revisao v3.12 — erro claro em slots de valor unico
 
 - [x] 138. Guarda no expansor (`_is_value_slot` + dono): `for-generate`/`when`/`template-set` em defaults, returns, args, operandos e condicoes falham nomeando as duas formas (antes vazava erro confuso do transpiler, ex. "misplaced '='" no `var`).

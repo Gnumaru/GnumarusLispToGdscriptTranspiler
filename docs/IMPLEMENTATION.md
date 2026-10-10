@@ -88,7 +88,8 @@ com mensagem em portugues.
 | `(signal nome)` / `(signal nome (args...))` | `signal ...` (args sem retorno) |
 | `(lambda (sig...) corpo...)` | `func(args...) [-> Ret]:` como valor |
 | `(var ... (get corpo...) [(set (nome) corpo...)])` | `var ...:` + blocos (so membros) |
-| `(call nome args...)` | `nome(a1, a2)` (statement e valor; aninha) |
+| `(call nome args...)` | `nome(a1, a2)` (statement e valor; aninha; alvo pode ser expressao invocada: `(call (call f x) 1)` vira `f(x)(1)`) |
+| `(chain raiz elos...)` | `raiz.elo(...).prop` (elos `(nome args...)` ou atomos-propriedade; raiz aninha; statement, valor e operando) |
 | `(+ a b ...)` `(- a b)` `(- x)` `(* ...)` `(/ ...)` `(% ...)` `(** ...)` | infixas n-arias/binarias + menos unario |
 | `(== a b)` `(!= ...)` `(< ...)` `(> ...)` `(<= ...)` `(>= ...)` | comparacoes (statement e valor) |
 | `(and a b ...)` `(or ...)` `(not x)` | logicos (statement e valor; `not` unario) |

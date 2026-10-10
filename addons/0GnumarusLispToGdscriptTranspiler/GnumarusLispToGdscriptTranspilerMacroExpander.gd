@@ -241,6 +241,10 @@ static func _is_value_slot(p_form: Array, p_idx: int) -> bool:
 		"call", "assert":
 			# Every argument is one value (name included: it must be one atom).
 			return arg >= 0
+		"chain":
+			# Root and every link hold one segment (splice bodies would
+			# silently become method links, so they fail fast instead).
+			return (p_form as Array).size() >= 2 and arg >= 0
 		"ternary":
 			return arg >= 0 and arg <= 2
 		"await":

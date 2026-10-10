@@ -66,6 +66,7 @@ func _init() -> void:
 	_test_signatures()
 	_test_accessors()
 	_test_expressions()
+	_test_chain()
 	_test_collections()
 	_test_annotations()
 	_test_small_forms()
@@ -628,6 +629,70 @@ func _test_expressions() -> void:
 		# Facade result, expected to fail.
 		var r: Dictionary = FacadeScript.transpile_text(c)
 		_check("expr error: %s" % c, r["ok"] == false, str(r))
+
+
+## Tests of chained calls and nested call targets: method links,
+## no-arg links, property atoms, mixed chains, values, nesting, operands
+## and the link-shape errors.
+func _test_chain() -> void:
+	_check_transpiles("chain basic",
+		"(chain myobj (qwer 0) (asdf 1) (zxcv 2))",
+		"myobj.qwer(0).asdf(1).zxcv(2)\n")
+	_check_transpiles("chain no args",
+		"(chain o (m))",
+		"o.m()\n")
+	_check_transpiles("chain props",
+		"(chain o pos x)",
+		"o.pos.x\n")
+	_check_transpiles("chain mixed",
+		"(chain o pos (m 1))",
+		"o.pos.m(1)\n")
+	_check_transpiles("chain dotted link",
+		"(chain o (a.b 1))",
+		"o.a.b(1)\n")
+	_check_transpiles("chain as value",
+		"(var r = (chain o (m 1)))",
+		"var r = o.m(1)\n")
+	_check_transpiles("chain as return",
+		"(func f () (return (chain o (m 1))))",
+		"func f():\n\treturn o.m(1)\n")
+	_check_transpiles("chain nested root",
+		"(chain (call f x) (m 1))",
+		"f(x).m(1)\n")
+	_check_transpiles("chain in chain",
+		"(chain (chain o (a 1)) (b 2))",
+		"o.a(1).b(2)\n")
+	_check_transpiles("chain infix root",
+		"(chain (+ a b) (m 1))",
+		"(a + b).m(1)\n")
+	_check_transpiles("chain as operand",
+		"(var t = (+ (chain o (m 1)) 2))",
+		"var t = o.m(1) + 2\n")
+	_check_transpiles("call nested target",
+		"(call (call f x) 1)",
+		"f(x)(1)\n")
+	_check_transpiles("call chain target",
+		"(call (chain o (m 1)) 2)",
+		"o.m(1)(2)\n")
+	_check_transpiles("call infix target",
+		"(call (+ a b) 1)",
+		"(a + b)(1)\n")
+	_check_transpiles("chain numeric link",
+		"(chain o (1 2))",
+		"o.1(2)\n")
+	# Bare forms rejected by the facade (ok must be false).
+	var cases: Array = [
+		"(chain)",
+		"(chain o)",
+		"(chain o ())",
+		"(chain \"\" (m))",
+		"(chain o \"\")",
+		"(call (array 1) 2)",
+	]
+	for c in cases:
+		# Facade result, expected to fail.
+		var r: Dictionary = FacadeScript.transpile_text(c)
+		_check("chain error: %s" % c, r["ok"] == false, str(r))
 
 
 ## Tests of array/dict literals: shapes, nesting, expressions inside,
@@ -1370,7 +1435,7 @@ func _test_end_to_end() -> void:
 func _test_transpiler_errors() -> void:
 	# Transpiler instance holding the v1 operation table.
 	var transpiler: RefCounted = TranspilerScript.new()
-	_check("transpiler: 72 registered operations", transpiler.operation_names().size() == 72, str(transpiler.operation_names()))
+	_check("transpiler: 73 registered operations", transpiler.operation_names().size() == 73, str(transpiler.operation_names()))
 	# Unknown operation must fail, not invent output.
 	var r1: Dictionary = FacadeScript.transpile_text("(foo bar)")
 	_check("transpiler error: unknown operation", r1["ok"] == false, str(r1))
