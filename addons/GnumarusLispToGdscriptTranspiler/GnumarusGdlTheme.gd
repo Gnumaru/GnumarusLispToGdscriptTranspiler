@@ -3,7 +3,8 @@
 ## Holds the exact word lists and default colors the Godot editor uses for
 ## GDScript (extracted from the 4.7.2 sources), so `.gdl` atoms can reuse the
 ## same colors without any context: each known word always maps to the same
-## color. Dynamic per-user values arrive later through
+## color. Gnumarus-only operations get an invented lime tint (no Godot
+## equivalent exists for them). Dynamic per-user values arrive later through
 ## GnumarusGdlColorizer.configure (fed by the highlighter impl from
 ## EditorSettings); the constants below are only the dark-theme fallbacks used
 ## headless and before the first editor sync. Pure data, fully testable.
@@ -38,7 +39,14 @@ const DEFAULT_COLORS: Dictionary = {
 	"function": Color(0.4, 0.64, 0.81),
 	"comment": Color(0.4, 0.4, 0.4),
 	"text": Color(0.67, 0.67, 0.67),
+	"gnumarus": Color(0.6, 1.0, 0.35),
 }
+## All known categories in stable order (configure keys and theme hashing).
+const CATEGORIES: Array = [
+	"keyword", "control_flow", "base_type", "engine_type", "string",
+	"number", "annotation", "global_function", "function", "comment",
+	"text", "gnumarus",
+]
 ## GDScript control-flow keywords (is_control_flow_keyword in gdscript.cpp).
 const CONTROL_FLOW_KEYWORDS: Array = [
 	"break", "continue", "elif", "else", "for", "if", "match", "pass",

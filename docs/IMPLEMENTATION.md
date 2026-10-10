@@ -381,6 +381,10 @@ nunca fatia, `-5` segue numero). Mapas saem com chaves em ordem ascendente
 de coluna: o loop de desenho do `TextEdit` percorre as entradas em ordem
 de insercao e para na primeira chave maior (v3.7; sem isso os vaos
 preenchidos por ultimo vazavam na tela mesmo com o mapa correto).
+Operacoes so-Gnumarus (`call`, `defmacro`, `join`, `lambda`...) levam um
+lima inventado (`gnumarus`, sem chave no editor); palavras do GDScript
+seguem fieis, e segmentos de hifen classificam sozinhos (`static-var`
+segue vermelho/vermelho, `template-set` sai texto/azul de funcao).
 
 ## 8. Alternativas consideradas
 

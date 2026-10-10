@@ -1182,12 +1182,23 @@ func _test_highlighter() -> void:
 	_check_eq("highlight control color", colorizer.color_for_atom("if"), defaults["control_flow"])
 	var flow: Array = colorizer.compute_all(PackedStringArray(["(if x (pass))"]))
 	_check_eq("highlight control line", flow[0][1]["color"], defaults["control_flow"])
-	# Gnumarus-only operations fall back to the keyword color.
-	_check_eq("highlight gdl defmacro", colorizer.category_for_atom("defmacro"), "keyword")
-	_check_eq("highlight gdl join", colorizer.category_for_atom("join"), "keyword")
-	_check_eq("highlight gdl class-name", colorizer.category_for_atom("class-name"), "keyword")
-	_check_eq("highlight gdl dict-lua", colorizer.category_for_atom("dict-lua"), "keyword")
-	_check_eq("highlight gdl call", colorizer.category_for_atom("call"), "keyword")
+	# Gnumarus-only operations carry their own lime tint, never GDScript reds.
+	_check_eq("highlight gdl defmacro", colorizer.category_for_atom("defmacro"), "gnumarus")
+	_check_eq("highlight gdl join", colorizer.category_for_atom("join"), "gnumarus")
+	_check_eq("highlight gdl class-name", colorizer.category_for_atom("class-name"), "gnumarus")
+	_check_eq("highlight gdl dict-lua", colorizer.category_for_atom("dict-lua"), "gnumarus")
+	_check_eq("highlight gdl call", colorizer.category_for_atom("call"), "gnumarus")
+	_check_eq("highlight gdl lambda", colorizer.category_for_atom("lambda"), "gnumarus")
+	_check_eq("highlight gdl tint", colorizer.color_for_atom("call"), defaults["gnumarus"])
+	_check_eq("highlight gnumarus default", defaults["gnumarus"], Color(0.6, 1.0, 0.35))
+	var call_line: Array = colorizer.compute_all(PackedStringArray(["(call f x)"]))
+	_check_eq("highlight line gnumarus", call_line[0][1]["color"], defaults["gnumarus"])
+	_check_eq("highlight line gnumarus gap", call_line[0][5]["color"], defaults["text"])
+	# Hyphen segments keep faithful colors ("template" is no operation on
+	# its own, so it stays text gray while "set" keeps function blue).
+	var split_set: Array = colorizer.compute_all(PackedStringArray(["(template-set a 1)"]))
+	_check_eq("highlight split template", split_set[0][1]["color"], defaults["text"])
+	_check_eq("highlight split set", split_set[0][10]["color"], defaults["function"])
 	# get/set use the function color, like the GDScript highlighter.
 	_check_eq("highlight get category", colorizer.category_for_atom("get"), "function")
 	_check_eq("highlight set category", colorizer.category_for_atom("set"), "function")
@@ -1215,7 +1226,7 @@ func _test_highlighter() -> void:
 	var extends_line: Array = colorizer.compute_all(PackedStringArray(["(extends Node)"]))
 	_check_eq("highlight line engine type", extends_line[0][9]["color"], defaults["engine_type"])
 	# Lowercase array is the Gnumarus operation, not the GDScript type.
-	_check_eq("highlight array op", colorizer.category_for_atom("array"), "keyword")
+	_check_eq("highlight array op", colorizer.category_for_atom("array"), "gnumarus")
 	# No color leaks right: gaps between atoms use the text gray.
 	var gap: Array = colorizer.compute_all(PackedStringArray(["(static-var instance_count int = 0)"]))
 	_check_eq("highlight gap head", gap[0][1]["color"], defaults["keyword"])
@@ -1305,7 +1316,7 @@ func _test_highlighter() -> void:
 	# Highlighter implementation without editor (null proxy: no TextEdit,
 	# theme sync stays a no-op and line queries come back empty).
 	var impl: RefCounted = HighlighterImplScript.new(null)
-	_check_eq("highlight impl name", impl._get_name(), "Gnumarus 3.6")
+	_check_eq("highlight impl name", impl._get_name(), "Gnumarus 3.8")
 	_check_eq("highlight impl langs", impl._get_supported_languages(), PackedStringArray(["gdl"]))
 	_check("highlight impl no editor", impl._get_line_syntax_highlighting(0).is_empty(), "")
 	impl.sync_theme()

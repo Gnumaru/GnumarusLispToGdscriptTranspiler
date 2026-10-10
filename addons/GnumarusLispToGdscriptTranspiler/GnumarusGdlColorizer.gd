@@ -10,8 +10,9 @@
 ## atoms with the exact GDScript color of their word class (plain keywords,
 ## control-flow keywords kept separate, base types, engine classes, global
 ## functions and get/set), independent of context. Gnumarus-only operations
-## fall back to the keyword color through the live transpiler table, so new
-## operations never rot the highlighting. Theme colors arrive through
+## take an invented lime tint through the live transpiler table (new
+## operations never rot the highlighting), so they read apart from
+## GDScript words at a glance. Theme colors arrive through
 ## configure (the highlighter impl feeds EditorSettings values); the
 ## GnumarusGdlTheme dark defaults apply headless and before the first sync.
 ## Pure data logic, fully testable without the editor.
@@ -95,12 +96,13 @@ func _init() -> void:
 
 ## Replaces theme colors with editor values (category name -> Color).
 ## Unknown categories or non-Color values fail without applying anything.
-## Returns {"ok": bool, "error": String}.
+## The "gnumarus" tint has no editor key (invented here) but stays
+## configurable through the same call. Returns {"ok": bool, "error": String}.
 func configure(p_colors: Dictionary) -> Dictionary:
 	# Pending colors validated before touching the active table.
 	var pending: Dictionary = _colors.duplicate()
 	for category in p_colors:
-		if not ThemeScript.SETTING_KEYS.has(category):
+		if not (category in ThemeScript.CATEGORIES):
 			return {"ok": false, "error": "unknown color category: '%s'" % str(category)}
 		if not (p_colors[category] is Color):
 			return {"ok": false, "error": "color for '%s' must be a Color" % str(category)}
@@ -121,7 +123,7 @@ func get_color(p_category: String) -> Color:
 func theme_hash() -> int:
 	# Category values in stable key order.
 	var parts: Array = []
-	for category in ThemeScript.SETTING_KEYS:
+	for category in ThemeScript.CATEGORIES:
 		parts.append(str(_colors.get(category, Color(0, 0, 0, 0))))
 	return "".join(parts).hash()
 
@@ -129,9 +131,10 @@ func theme_hash() -> int:
 ## Names the word class of one bare atom ("" keeps the theme default).
 ## Order mirrors the GDScript highlighter: annotations, control flow,
 ## get/set functions, plain keywords, global functions, base types, engine
-## types, Gnumarus-only operations (keyword fallback), then numbers.
-## Whole-word class: hyphenated operations report their dominant class here
-## while the display (see _paint_atom) splits their sub-words.
+## types, then Gnumarus-only operations (own lime tint, never the GDScript
+## reds), then numbers. Whole-word class: hyphenated operations report
+## their dominant class here while the display (see _paint_atom) splits
+## their sub-words.
 func category_for_atom(p_word: String) -> String:
 	# Lone "@" is an error like in the transpiler (handled by the caller).
 	if p_word == "@":
@@ -151,7 +154,7 @@ func category_for_atom(p_word: String) -> String:
 	if _engine_types.has(p_word):
 		return "engine_type"
 	if _gdl_ops.has(p_word):
-		return "keyword"
+		return "gnumarus"
 	if p_word.is_valid_int() or p_word.is_valid_float():
 		return "number"
 	return ""

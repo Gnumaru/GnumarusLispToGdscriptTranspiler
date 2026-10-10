@@ -17,6 +17,11 @@ Legenda: `[x]` feito, `[ ]` pendente/futuro.
 - [x] 11. Validacao — importar o projeto headless, rodar o TestRunner e checar `--check-only` nos `.gd` gerados/esperados.
 - [x] 12. Documentacao — comentarios `##`/`#` em toda classe, funcao e variavel.
 
+## Revisao v3.8 — matiz proprio das operacoes Gnumarus
+
+- [x] 130. Categoria `gnumarus` (lima inventado, configuravel, sem chave no editor): ops so-Gnumarus distinguiveis a olho; palavras GDScript intactas, segmentos de hifen independentes.
+- [x] 131. `CATEGORIES` no tema (validacao do `configure` + `theme_hash`); versao do dropdown em 3.8; TestRunner 753/753 + `--check-only`.
+
 ## Revisao v3.7 — ordem das entradas (contrato do TextEdit)
 
 - [x] 128. Mapas com chaves ascendentes: o desenho percorre em ordem de insercao e para na primeira chave maior — vaos anexados por ultimo vazavam na tela com o mapa "correto" (causa dos vazamentos pos-v3.6).

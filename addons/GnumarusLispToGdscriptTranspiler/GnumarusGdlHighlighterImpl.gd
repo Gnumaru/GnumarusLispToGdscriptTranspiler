@@ -16,7 +16,7 @@ const ColorizerScript = preload("res://addons/GnumarusLispToGdscriptTranspiler/G
 const ThemeScript = preload("res://addons/GnumarusLispToGdscriptTranspiler/GnumarusGdlTheme.gd")
 ## Highlighter display version (bumped when the coloring rules change, so
 ## the script editor dropdown tells which rules are actually running).
-const HIGHLIGHTER_VERSION: String = "3.6"
+const HIGHLIGHTER_VERSION: String = "3.8"
 
 
 ## Proxy owning this implementation (editor calls go through it).
