@@ -1,0 +1,42 @@
+# this is a gdscript style line comment, it will be discarded before transpilation
+; this is a lisp style line comment, it will be discarded before transpilation just like the other
+
+# defining class names
+(class-name MyMiscTutorialClass) # line comments may start anywhere
+# defining inheritance
+(extends Node)
+
+(comment this will generate a comment in gdscript)
+(comment 'this will also generate a comment in gdscript, but the quotes are discarded')
+(comment "'this will also generate a comment in gdscript, but the quotes are kept'")
+
+# declaring enums
+(enum (MyEnumName) member_0 (member_1 1))
+(enum my_anonym_enum_member_0 my_anonym_enum_member_1)
+
+# declaring consts
+(const my_const_0 float = 9.0)
+(const my_const_1 := true)
+
+# declaring a static var
+(static-var my_stat_var_0)
+(static-var my_stat_var_1 int)
+(static-var my_stat_var_2 float = 9.0)
+(static-var my_stat_var_3 := true)
+
+# declaring member vars
+(var my_var_0)
+(var my_var_1 int)
+(var my_var_2 float = 9.0)
+(var my_var_3 := true)
+
+# declaring member vars with annotations
+(var @export my_export_var_0 int)
+(var @export my_export_var_1 float = 9.0)
+(var @export my_export_var_2 := true)
+
+# declaring onreadies
+(var @onready my_onreadyexport_var_0 := $node)
+(var @onready my_onreadyexport_var_1 Node = %node)
+
+# properties with getters and setters

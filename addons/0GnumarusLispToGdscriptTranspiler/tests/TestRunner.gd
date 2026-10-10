@@ -1248,6 +1248,10 @@ func _test_watcher() -> void:
 	# Forced run over the fixtures root touches nothing (no stamps back).
 	var r8: Dictionary = watcher.transpile_sidecars(TESTS_DIR, true)
 	_check("watcher: forced skip", (r8["updated"] as Array).is_empty() and (r8["failed"] as Array).is_empty(), str(r8))
+	# Editor refresh is a guarded no-op without a proxy: reaching the
+	# suite exit below proves this call (and the r1/r3 runs with writes)
+	# never touched editor APIs headless.
+	watcher._refresh_editor(["res://tmp/watch_probe.gd"])
 
 
 ## Replicates the engine draw walk over one line map: entries apply in

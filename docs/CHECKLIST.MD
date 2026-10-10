@@ -17,6 +17,21 @@ Legenda: `[x]` feito, `[ ]` pendente/futuro.
 - [x] 11. Validacao — importar o projeto headless, rodar o TestRunner e checar `--check-only` nos `.gd` gerados/esperados.
 - [x] 12. Documentacao — comentarios `##`/`#` em toda classe, funcao e variavel.
 
+## Revisao v3.17 — update_file em vez de scan (raiz do bug dos dois saves)
+
+- [x] 148. Causa: `st_mtime` em segundos + scan pula diretorios com mtime igual — escrita no mesmo segundo fica invisivel; `update_file` por irmao (sincrono, novos e alterados) + scan diferido de rede.
+- [x] 149. Cobertura headless das guardas; TestRunner 815/815 + `--check-only`.
+
+## Revisao v3.16 — refresh diferido (bug dos dois saves)
+
+- [x] 146. `_refresh_editor` diferido com debounce (`_refresh_pending` + timer 0.5s x10): scan imediato apos o save caia na janela do scan detector ainda ativo e era engolido; espera `is_scanning()` livre e escaneia uma vez.
+- [x] 147. Cobertura headless das guardas; TestRunner 815/815 + `--check-only`.
+
+## Revisao v3.15 — refresh do editor apos transpirar
+
+- [x] 144. `_refresh_editor` (scan apos escrita; quieto sem mudancas; no-op headless; scan e reentrante e o unico que mostra arquivos novos).
+- [x] 145. Cobertura via runs com proxy nulo + chamada direta; TestRunner 815/815 + `--check-only`.
+
 ## Revisao v3.14 — comentarios de linha `;`/`#`
 
 - [x] 142. Tokenizer descarta `;`/`#` ate LF/CR em qualquer ponto fora de empacotados (inclusive mid-atomo); `\;`/`\#` e empacotados preservam; colorizador pinta com a cor `comment`.

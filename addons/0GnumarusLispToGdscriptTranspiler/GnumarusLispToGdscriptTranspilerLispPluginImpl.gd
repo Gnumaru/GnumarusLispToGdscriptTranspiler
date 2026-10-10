@@ -21,6 +21,10 @@ const HighlighterScript = preload("res://addons/0GnumarusLispToGdscriptTranspile
 const TEXTFILE_EXTENSIONS_SETTING: String = "docks/filesystem/textfile_extensions"
 ## Project tool menu item name for manual transpilation.
 const TOOL_MENU_NAME: String = "Transpile Gnumarus files"
+## Delay between editor refresh retries, in seconds.
+const REFRESH_DELAY: float = 0.5
+## Maximum refresh attempts before scanning anyway (last resort).
+const REFRESH_TRIES: int = 10
 ## Project path holding the addon self-test fixtures (never watcher
 ## inputs: its `.gd` files are expected test outputs, not build artifacts,
 ## so saving a `.gdl` while hacking the addon cannot stamp them).
@@ -39,6 +43,8 @@ var _highlighter: RefCounted = null
 var _done_stamp: Dictionary = {}
 ## Failed sources already reported: src path -> source content hash (no spam).
 var _failed_stamp: Dictionary = {}
+## Whether an editor refresh is already scheduled (debounce window).
+var _refresh_pending: bool = false
 
 
 ## Constructor: stores the proxy reference.
@@ -155,7 +161,89 @@ func transpile_sidecars(p_root: String, p_force: bool = false) -> Dictionary:
 		out.close()
 		_done_stamp[dst] = stamp
 		updated.append(dst)
+	# New/changed siblings only reach the dock and open editors once the
+	# editor notices them (direct FileAccess writes bypass it; without this
+	# the user must defocus the editor to see anything). Quiet when nothing
+	# changed.
+	if not updated.is_empty():
+		_refresh_editor(updated)
 	return {"updated": updated, "failed": failed}
+
+
+## Forces fresh siblings into the editor at once (no-op headless or
+## without a proxy: the core stays testable stand-alone). Per-file
+## update_file calls land synchronously (new and modified files alike,
+## straight past the second-granularity directory gate that blinded
+## scans); the deferred scan below stays as a safety net for unknown
+## directories only.
+func _refresh_editor(p_updated: Array) -> void:
+	if _proxy == null or not is_instance_valid(_proxy):
+		return
+	if not _entered:
+		return
+	# Resource filesystem (bails below when unwired).
+	var filesystem: EditorFileSystem = _editor_filesystem()
+	if filesystem == null:
+		return
+	# Written siblings pushed one by one (instant dock/editor refresh).
+	for dst in p_updated:
+		filesystem.update_file(dst)
+	# Writes within one window share a single fallback scan.
+	if _refresh_pending:
+		return
+	_refresh_pending = true
+	_arm_refresh(0)
+
+
+## Schedules one refresh tick (timer callbacks on freed objects never
+## fire, so plugin exit mid-wait is safe by construction).
+func _arm_refresh(p_attempt: int) -> void:
+	# Editor tree behind the proxy (bails and releases below when gone).
+	var tree: SceneTree = _editor_tree()
+	if tree == null:
+		_refresh_pending = false
+		return
+	tree.create_timer(REFRESH_DELAY).timeout.connect(Callable(self, "_on_refresh_tick").bind(p_attempt))
+
+
+## Runs one refresh tick: re-arms while the scanner is busy, scans once
+## it is free (or on the last attempt, same as the old behavior).
+func _on_refresh_tick(p_attempt: int) -> void:
+	if not _entered or _proxy == null or not is_instance_valid(_proxy):
+		_refresh_pending = false
+		return
+	# Resource filesystem running the scan (bails when unwired).
+	var filesystem: EditorFileSystem = _editor_filesystem()
+	if filesystem == null:
+		_refresh_pending = false
+		return
+	if filesystem.is_scanning() and p_attempt + 1 < REFRESH_TRIES:
+		_arm_refresh(p_attempt + 1)
+		return
+	_refresh_pending = false
+	filesystem.scan()
+
+
+## Returns the editor SceneTree through the proxy (null headless or exited).
+func _editor_tree() -> SceneTree:
+	if _proxy == null or not is_instance_valid(_proxy):
+		return null
+	if not _proxy.has_method("get_tree"):
+		return null
+	return _proxy.get_tree() as SceneTree
+
+
+## Returns the resource filesystem through the proxy (null when unwired).
+func _editor_filesystem() -> EditorFileSystem:
+	if _proxy == null or not is_instance_valid(_proxy):
+		return null
+	if not _proxy.has_method("get_editor_interface"):
+		return null
+	# Editor interface behind the proxy (null outside the editor).
+	var iface = _proxy.get_editor_interface()
+	if iface == null:
+		return null
+	return iface.get_resource_filesystem() as EditorFileSystem
 
 
 ## Collects every `.gdl` file under p_root (sorted, `.godot` and the addon
