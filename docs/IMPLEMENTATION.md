@@ -1,8 +1,8 @@
 # IMPLEMENTATION.md — Transpilador Gnumarus Lisp → GDScript (v1)
 
 Documento de planejamento da etapa inicial. Todo o codigo mora em
-`addons/GnumarusLispToGdscriptTranspiler/`, os testes em
-`addons/GnumarusLispToGdscriptTranspiler/tests/` e este planejamento em `docs/`.
+`addons/0GnumarusLispToGdscriptTranspiler/`, os testes em
+`addons/0GnumarusLispToGdscriptTranspiler/tests/` e este planejamento em `docs/`.
 
 ## 1. Objetivo da v1
 
@@ -27,16 +27,16 @@ aplicando transformacoes a partir de uma tabela de operacoes de nomes conhecidos
 ## 2. Arquitetura (pipeline em 3 etapas + fachada)
 
 ```
-texto .gdl ──▶ GnumarusTokenizer ──▶ lista plana de tokens ──▶ GnumarusParser
-   ──▶ arvore aninhada (Strings e Arrays) ──▶ GnumarusTranspiler ──▶ String GDScript
+texto .gdl ──▶ GnumarusLispToGdscriptTranspilerTokenizer ──▶ lista plana de tokens ──▶ GnumarusLispToGdscriptTranspilerParser
+   ──▶ arvore aninhada (Strings e Arrays) ──▶ GnumarusLispToGdscriptTranspilerTranspiler ──▶ String GDScript
 ```
 
 | Arquivo | Classe (`RefCounted`) | Responsabilidade |
 |---|---|---|
-| `GnumarusTokenizer.gd` | `GnumarusTokenizer` | Quebra o texto em lista plana de tokens (`(`, `)` e atomos String), respeitando os 4 delimitadores de string e escapes com backslash. |
-| `GnumarusParser.gd` | `GnumarusParser` | Converte a lista plana em arvore aninhada de listas. Detecta parenteses desbalanceados e limita a profundidade. |
-| `GnumarusTranspiler.gd` | `GnumarusTranspiler` | Percorre a arvore e emite GDScript via tabela de operacoes (`_operations`: nome → `Callable`). Controla indentacao com tabs. |
-| `GnumarusLisp.gd` | `GnumarusLisp` | Fachada estatica: `transpile_text(text)` e `transpile_file(path)` encadeiam as 3 etapas e prefixam erros com a etapa que falhou. |
+| `GnumarusLispToGdscriptTranspilerTokenizer.gd` | `GnumarusLispToGdscriptTranspilerTokenizer` | Quebra o texto em lista plana de tokens (`(`, `)` e atomos String), respeitando os 4 delimitadores de string e escapes com backslash. |
+| `GnumarusLispToGdscriptTranspilerParser.gd` | `GnumarusLispToGdscriptTranspilerParser` | Converte a lista plana em arvore aninhada de listas. Detecta parenteses desbalanceados e limita a profundidade. |
+| `GnumarusLispToGdscriptTranspilerTranspiler.gd` | `GnumarusLispToGdscriptTranspilerTranspiler` | Percorre a arvore e emite GDScript via tabela de operacoes (`_operations`: nome → `Callable`). Controla indentacao com tabs. |
+| `GnumarusLispToGdscriptTranspilerLisp.gd` | `GnumarusLispToGdscriptTranspilerLisp` | Fachada estatica: `transpile_text(text)` e `transpile_file(path)` encadeiam as 3 etapas e prefixam erros com a etapa que falhou. |
 
 Retorno padrao de todas as etapas: `{"ok": bool, "error": String, ...}` mais
 `"tokens"` (tokenizer), `"tree"` (parser) ou `"code"` (transpiler/fachada).
@@ -196,7 +196,7 @@ sublista-1 (`(enum (E) ...)`, anonimo sem ela) mora no topo e em membros;
 `func @abstract` sem corpo emite declaracao sem `:` (e com corpo e erro,
 como `@abstract` em `static`).
 
-Includes (`GnumarusIncludeResolver`, fase 2/meta-template): `(include
+Includes (`GnumarusLispToGdscriptTranspilerIncludeResolver`, fase 2/meta-template): `(include
 caminho)` em qualquer posicao e **substituido pelas formas de topo** do
 arquivo (splice colado, nunca aninhado; vazio some; empacotado intocado).
 Caminhos: relativo ao arquivo que inclui, `res://`, `user://`, `/` de
@@ -208,7 +208,7 @@ expande estruturalmente e pode falhar depois no transpiler com erro de
 uso — aceito e documentado. Erros de transpiler em conteudo incluido
 perdem o nome do arquivo (sem rastros de span, fora de escopo).
 
-Heranca de templates (`GnumarusTemplateResolver`, meta-template Jinja):
+Heranca de templates (`GnumarusLispToGdscriptTranspilerTemplateResolver`, meta-template Jinja):
 pai declara `(block NOME corpo...)` em qualquer posicao; filho com
 `(template-extends CAMINHO)` como primeira forma do topo sobrescreve por
 nome, colando o corpo do filho no lugar (nunca aninhado). Pai sozinho
@@ -222,7 +222,7 @@ extends) recursam; pilha canonica + limite 32. `(super)` sem args em corpo
 de override cola o default (copia por ocorrencia; encadeia entre niveis);
 `super` sem pai e erro.
 
-Macros (`GnumarusMacroExpander`, depois dos templates): `(defmacro NOME
+Macros (`GnumarusLispToGdscriptTranspilerMacroExpander`, depois dos templates): `(defmacro NOME
 (params...) CORPO-FORMA-UNICA)` no topo (some, nao gera codigo); chamadas
 `(NOME args...)` viram o corpo com args crus substituidos (sem higiene;
 arg com efeito avalia uma vez por copia). No maximo um `...rest` por
@@ -356,23 +356,23 @@ deletada deixa o orfao. Edicao em include/pai nao retriggera dependentes
 `docks/filesystem/textfile_extensions` (persiste no exit): `.gdl` abre
 como texto puro — sem parsing GDScript. Nao ligado no `project.godot`
 deste repo (fixtures de erro dariam spam a cada scan). O coletor nunca
-desce em `addons/GnumarusLispToGdscriptTranspiler/tests` (nem forcado):
+desce em `addons/0GnumarusLispToGdscriptTranspiler/tests` (nem forcado):
 os `.gd` ali sao saidas esperadas dos testes, nao artefatos de build —
 salvar um `.gdl` com o plugin ativo nao os carimba mais.
 
-Highlighter (v3.4): `GnumarusGdlTheme` (`RefCounted` puro, so dados)
+Highlighter (v3.4): `GnumarusLispToGdscriptTranspilerGdlTheme` (`RefCounted` puro, so dados)
 congela as listas e cores padrao do GDScript 4.7.2 (keywords separadas em
 `keyword`/`control_flow`, tipos base, `get`/`set` com cor de funcao, funcoes
 globais, anotacoes; vermelho de erro constante, sem chave de tema).
-`GnumarusGdlColorizer` classifica cada atomo sem contexto pela mesma cor do
+`GnumarusLispToGdscriptTranspilerGdlColorizer` classifica cada atomo sem contexto pela mesma cor do
 GDScript (`category_for_atom`/`color_for_atom` publicos e testaveis;
 `configure` injeta cores e `theme_hash` distingue troca de tema de edicao
 de texto); tipos da engine via `ClassDB` ao vivo, ops so-Gnumarus caem no
 keyword pela tabela viva, rainbow de parenteses e indent mantidos.
-`GnumarusGdlHighlighterImpl` (`RefCounted`, dono do colorizer + memo por
+`GnumarusLispToGdscriptTranspilerGdlHighlighterImpl` (`RefCounted`, dono do colorizer + memo por
 hash de texto + hash de tema) sincroniza de `EditorSettings`
 (`sync_theme`, no-op headless; reinscreve em `settings_changed`) e
-`GnumarusGdlHighlighter` e proxy burro (excecao documentada: `_create`
+`GnumarusLispToGdscriptTranspilerGdlHighlighter` e proxy burro (excecao documentada: `_create`
 precisa retornar `EditorSyntaxHighlighter`, o que o `RefCounted` nao pode
 construir). Vao entre atomos usa o cinza `text` (`text_color`), entao
 nenhuma cor vaza para a direita; atomos com `-` interior fatiam por

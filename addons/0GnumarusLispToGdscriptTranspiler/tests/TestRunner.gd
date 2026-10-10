@@ -1,7 +1,7 @@
 ## Automated test entry point for the transpiler (v1 + var revision).
 ##
 ## Run from the project root:
-## /sync/opt/godot/godot4.x86_64 --headless --path . --script res://addons/GnumarusLispToGdscriptTranspiler/tests/TestRunner.gd
+## /sync/opt/godot/godot4.x86_64 --headless --path . --script res://addons/0GnumarusLispToGdscriptTranspiler/tests/TestRunner.gd
 ## The process exits with code 0 when everything passes, 1 otherwise.
 ## Covers: tokenizer (basic, 4 delimiters, escapes, errors), parser
 ## (nesting, errors), var forms (positional, =, :=, verbatim values, errors)
@@ -10,35 +10,35 @@ extends SceneTree
 
 
 ## Tokenizer script, loaded by path.
-const TokenizerScript = preload("res://addons/GnumarusLispToGdscriptTranspiler/GnumarusTokenizer.gd")
+const TokenizerScript = preload("res://addons/0GnumarusLispToGdscriptTranspiler/GnumarusLispToGdscriptTranspilerTokenizer.gd")
 ## Parser script, loaded by path.
-const ParserScript = preload("res://addons/GnumarusLispToGdscriptTranspiler/GnumarusParser.gd")
+const ParserScript = preload("res://addons/0GnumarusLispToGdscriptTranspiler/GnumarusLispToGdscriptTranspilerParser.gd")
 ## Transpiler script, loaded by path.
-const TranspilerScript = preload("res://addons/GnumarusLispToGdscriptTranspiler/GnumarusTranspiler.gd")
+const TranspilerScript = preload("res://addons/0GnumarusLispToGdscriptTranspiler/GnumarusLispToGdscriptTranspilerTranspiler.gd")
 ## Facade script, loaded by path.
-const FacadeScript = preload("res://addons/GnumarusLispToGdscriptTranspiler/GnumarusLisp.gd")
+const FacadeScript = preload("res://addons/0GnumarusLispToGdscriptTranspiler/GnumarusLispToGdscriptTranspilerLisp.gd")
 ## Include resolver script, loaded by path.
-const IncludesScript = preload("res://addons/GnumarusLispToGdscriptTranspiler/GnumarusIncludeResolver.gd")
+const IncludesScript = preload("res://addons/0GnumarusLispToGdscriptTranspiler/GnumarusLispToGdscriptTranspilerIncludeResolver.gd")
 
 ## Directory holding the .gdl (input) / .gd (expected output) pairs.
-const TESTS_DIR: String = "res://addons/GnumarusLispToGdscriptTranspiler/tests"
+const TESTS_DIR: String = "res://addons/0GnumarusLispToGdscriptTranspiler/tests"
 ## Directory holding the include fixtures (pairs plus error cases).
-const INCLUDES_DIR: String = "res://addons/GnumarusLispToGdscriptTranspiler/tests/includes"
+const INCLUDES_DIR: String = "res://addons/0GnumarusLispToGdscriptTranspiler/tests/includes"
 ## Directory holding the template fixtures (pairs plus error cases).
-const TEMPLATES_DIR: String = "res://addons/GnumarusLispToGdscriptTranspiler/tests/templates"
+const TEMPLATES_DIR: String = "res://addons/0GnumarusLispToGdscriptTranspiler/tests/templates"
 ## Directory holding the macro fixture (pair) for end-to-end coverage.
-const MACROS_DIR: String = "res://addons/GnumarusLispToGdscriptTranspiler/tests/macros"
+const MACROS_DIR: String = "res://addons/0GnumarusLispToGdscriptTranspiler/tests/macros"
 ## Lisp editor plugin proxy script, loaded by path (parse guard: proxies
 ## only instantiate inside the editor).
-const LispPluginScript = preload("res://addons/GnumarusLispToGdscriptTranspiler/GnumarusLispPlugin.gd")
+const LispPluginScript = preload("res://addons/0GnumarusLispToGdscriptTranspiler/GnumarusLispToGdscriptTranspilerLispPlugin.gd")
 ## Lisp editor plugin implementation script, loaded by path.
-const PluginImplScript = preload("res://addons/GnumarusLispToGdscriptTranspiler/GnumarusLispPluginImpl.gd")
+const PluginImplScript = preload("res://addons/0GnumarusLispToGdscriptTranspiler/GnumarusLispToGdscriptTranspilerLispPluginImpl.gd")
 ## Gdl colorizer script, loaded by path (pure coloring logic).
-const ColorizerScript = preload("res://addons/GnumarusLispToGdscriptTranspiler/GnumarusGdlColorizer.gd")
+const ColorizerScript = preload("res://addons/0GnumarusLispToGdscriptTranspiler/GnumarusLispToGdscriptTranspilerGdlColorizer.gd")
 ## Gdl theme script, loaded by path (fallback colors and word lists).
-const ThemeScript = preload("res://addons/GnumarusLispToGdscriptTranspiler/GnumarusGdlTheme.gd")
+const ThemeScript = preload("res://addons/0GnumarusLispToGdscriptTranspiler/GnumarusLispToGdscriptTranspilerGdlTheme.gd")
 ## Gdl highlighter implementation script, loaded by path.
-const HighlighterImplScript = preload("res://addons/GnumarusLispToGdscriptTranspiler/GnumarusGdlHighlighterImpl.gd")
+const HighlighterImplScript = preload("res://addons/0GnumarusLispToGdscriptTranspiler/GnumarusLispToGdscriptTranspilerGdlHighlighterImpl.gd")
 
 ## Count of passing checks.
 var _passed: int = 0
@@ -1321,7 +1321,7 @@ func _test_highlighter() -> void:
 	_check("highlight impl no editor", impl._get_line_syntax_highlighting(0).is_empty(), "")
 	impl.sync_theme()
 	_check("highlight impl sync headless", impl._get_line_syntax_highlighting(0).is_empty(), "")
-	# NOTE: GnumarusGdlHighlighter itself only instantiates inside the editor
+	# NOTE: GnumarusLispToGdscriptTranspilerGdlHighlighter itself only instantiates inside the editor
 	# (engine rule for editor-virtual classes, like the proxies), so the thin
 	# proxy (name/langs/factory/memo) is covered by preload parse plus review;
 	# all coloring logic above runs through plain RefCounted classes.

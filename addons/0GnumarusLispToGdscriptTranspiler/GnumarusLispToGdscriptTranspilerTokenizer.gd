@@ -2,8 +2,8 @@
 ##
 ## Turns source text into a flat token list: each atom becomes a String and
 ## each structural paren becomes "(" or ")". It builds no structure (that is
-## GnumarusParser's job) and interprets no meaning (that is
-## GnumarusTranspiler's job). All state is local: the function is pure and
+## GnumarusLispToGdscriptTranspilerParser's job) and interprets no meaning (that is
+## GnumarusLispToGdscriptTranspilerTranspiler's job). All state is local: the function is pure and
 ## testable.
 ##
 ## Atom rules (see AGENTS.md):
@@ -11,7 +11,7 @@
 ## - "packed" spans use " ' ` or ´, without mixing the opening/closing pair;
 ##   packed content is appended to the atom in progress;
 ## - a backslash (\) escapes the next character in any position.
-class_name GnumarusTokenizer
+class_name GnumarusLispToGdscriptTranspilerTokenizer
 extends RefCounted
 
 

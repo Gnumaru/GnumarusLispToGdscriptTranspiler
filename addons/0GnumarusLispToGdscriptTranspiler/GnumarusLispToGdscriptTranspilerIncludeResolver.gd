@@ -7,14 +7,14 @@
 ## Included files may include others; circular chains and excessive depth fail
 ## with clear errors. Runs after parsing and before transpiling (and before
 ## any future macro expansion). Non-string heads never match — never crash.
-class_name GnumarusIncludeResolver
+class_name GnumarusLispToGdscriptTranspilerIncludeResolver
 extends RefCounted
 
 
 ## Tokenizer script, loaded by path.
-const TokenizerScript = preload("res://addons/GnumarusLispToGdscriptTranspiler/GnumarusTokenizer.gd")
+const TokenizerScript = preload("res://addons/0GnumarusLispToGdscriptTranspiler/GnumarusLispToGdscriptTranspilerTokenizer.gd")
 ## Parser script, loaded by path.
-const ParserScript = preload("res://addons/GnumarusLispToGdscriptTranspiler/GnumarusParser.gd")
+const ParserScript = preload("res://addons/0GnumarusLispToGdscriptTranspiler/GnumarusLispToGdscriptTranspilerParser.gd")
 ## Maximum include nesting depth (bounds even aliasing-evaded cycles).
 const MAX_INCLUDE_DEPTH: int = 32
 

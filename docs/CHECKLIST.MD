@@ -6,16 +6,26 @@ Legenda: `[x]` feito, `[ ]` pendente/futuro.
 
 - [x] 1. Pesquisa: confirmar binario do Godot (`/sync/opt/godot/godot4.x86_64`, versao 4.7.2) e estrutura do projeto.
 - [x] 2. Planejamento: escrever `docs/IMPLEMENTATION.md` (arquitetura, sintaxe, fases) e este `docs/CHECKLIST.MD`.
-- [x] 3. Estrutura inicial: criar `addons/GnumarusLispToGdscriptTranspiler/` e `tests/`.
-- [x] 4. Codigo core — `GnumarusTokenizer.gd` (`RefCounted`, 4 delimitadores, escapes com backslash, erros em portugues).
-- [x] 5. Codigo core — `GnumarusParser.gd` (lista plana → arvore aninhada, parenteses balanceados, limite de profundidade).
-- [x] 6. Codigo core — `GnumarusTranspiler.gd` (tabela `_operations`, ops `class-name/extends/var/comment/func/pass`, indentacao com tab, trailing comment de `func`).
-- [x] 7. Codigo core — `GnumarusLisp.gd` (fachada `transpile_text` / `transpile_file`).
+- [x] 3. Estrutura inicial: criar `addons/0GnumarusLispToGdscriptTranspiler/` e `tests/`.
+- [x] 4. Codigo core — `GnumarusLispToGdscriptTranspilerTokenizer.gd` (`RefCounted`, 4 delimitadores, escapes com backslash, erros em portugues).
+- [x] 5. Codigo core — `GnumarusLispToGdscriptTranspilerParser.gd` (lista plana → arvore aninhada, parenteses balanceados, limite de profundidade).
+- [x] 6. Codigo core — `GnumarusLispToGdscriptTranspilerTranspiler.gd` (tabela `_operations`, ops `class-name/extends/var/comment/func/pass`, indentacao com tab, trailing comment de `func`).
+- [x] 7. Codigo core — `GnumarusLispToGdscriptTranspilerLisp.gd` (fachada `transpile_text` / `transpile_file`).
 - [x] 8. Testes — fixtures `tests/Test1.gdl` → `tests/Test1.gd` (exemplo pedido, byte a byte).
 - [x] 9. Testes — fixtures `tests/Test2.gdl` → `tests/Test2.gd` (delimitadores alternativos, escapes, espacos).
 - [x] 10. Testes — `tests/TestRunner.gd` (tokenizer, parser, ponta a ponta, erros; saida 0/1).
 - [x] 11. Validacao — importar o projeto headless, rodar o TestRunner e checar `--check-only` nos `.gd` gerados/esperados.
 - [x] 12. Documentacao — comentarios `##`/`#` em toda classe, funcao e variavel.
+
+## Revisao v3.10 — prefixo das classes (GnumarusLispToGdscriptTranspiler*)
+
+- [x] 134. 13 arquivos + `.uid` renomeados; 94 trocas de identificadores (`class_name`, preloads, `plugin.cfg`, refs em comentarios/docs); prosa, carimbo `GNUMARUS`, menu e nome do dropdown intactos.
+- [x] 135. 2 comentarios obsoletos ("keyword fallback") corrigidos; cache global reconstruido (check-only do proxy); TestRunner 753/753 + `--check-only` em tudo + zero carimbos.
+
+## Revisao v3.9 — rename do diretorio (0Gnumarus...)
+
+- [x] 132. Diretorio renomeado para `0GnumarusLispToGdscriptTranspiler` (ordenacao no dock); `plugin.cfg` intacto (caminho relativo); `project.godot` ja estava sem a entrada do plugin.
+- [x] 133. Troca mecanica do prefixo em 10 `.gd` + 2 docs (sem `class_name` afetado); TestRunner 753/753 no novo caminho + `--check-only` + zero carimbos.
 
 ## Revisao v3.8 — matiz proprio das operacoes Gnumarus
 
@@ -41,30 +51,30 @@ Legenda: `[x]` feito, `[ ]` pendente/futuro.
 
 ## Revisao v3.4 — highlighter com as cores do GDScript
 
-- [x] 117. `GnumarusGdlTheme` (listas e cores padrao do GDScript 4.7.2: keyword/controle separados, base, get/set, globais, anotacoes).
-- [x] 118. `GnumarusGdlColorizer` com `category_for_atom`/`color_for_atom`/`configure`/`theme_hash`; engine via `ClassDB`, fallback keyword pela tabela viva, rainbow mantido.
-- [x] 119. `GnumarusGdlHighlighterImpl` (memo texto+tema, `sync_theme` de `EditorSettings`, no-op headless) + `GnumarusGdlHighlighter` como proxy burro (excecao `_create` documentada).
+- [x] 117. `GnumarusLispToGdscriptTranspilerGdlTheme` (listas e cores padrao do GDScript 4.7.2: keyword/controle separados, base, get/set, globais, anotacoes).
+- [x] 118. `GnumarusLispToGdscriptTranspilerGdlColorizer` com `category_for_atom`/`color_for_atom`/`configure`/`theme_hash`; engine via `ClassDB`, fallback keyword pela tabela viva, rainbow mantido.
+- [x] 119. `GnumarusLispToGdscriptTranspilerGdlHighlighterImpl` (memo texto+tema, `sync_theme` de `EditorSettings`, no-op headless) + `GnumarusLispToGdscriptTranspilerGdlHighlighter` como proxy burro (excecao `_create` documentada).
 - [x] 120. Bateria `_test_highlighter` ampliada (categorias, defaults byte a byte, injecao via `configure`, impl com proxy nulo); 24 fixtures restaurados (linha de carimbo removida) apos contaminacao por watcher.
 - [x] 121. Revalidar: TestRunner 719/719 + `--check-only` nos `.gd` tocados.
 
 ## Revisao v3.3 — highlighter rainbow `.gdl`
 
-- [x] 113. `GnumarusGdlColorizer` (scanner posicional: rainbow por profundidade, `)` solto em vermelho, indent por largura, strings/keywords/`@`/numeros; keywords da tabela viva).
-- [x] 114. `GnumarusGdlHighlighter` (`EditorSyntaxHighlighter`, auto-select por `gdl`, memo por hash) + registro no plugin (reabrir arquivos antigos).
+- [x] 113. `GnumarusLispToGdscriptTranspilerGdlColorizer` (scanner posicional: rainbow por profundidade, `)` solto em vermelho, indent por largura, strings/keywords/`@`/numeros; keywords da tabela viva).
+- [x] 114. `GnumarusLispToGdscriptTranspilerGdlHighlighter` (`EditorSyntaxHighlighter`, auto-select por `gdl`, memo por hash) + registro no plugin (reabrir arquivos antigos).
 - [x] 115. Bateria `_test_highlighter` (profundidades, carry entre linhas, escapes, erros); indent visivel com View Whitespace.
 - [x] 116. Revalidar: TestRunner 0 falhas + `--check-only` nos `.gd` (inclui colorizer/highlighter).
 
 ## Revisao v3.2 — watcher sidecar (troca o import plugin)
 
-- [x] 108. Remover `GnumarusGdlImport*` (import plugin era a ferramenta errada: destino sempre `.godot/imported`).
-- [x] 109. `GnumarusLispPluginImpl` observador: `filesystem_changed` + item manual, `transpile_sidecars` (hash de conteudo, so reescreve se mudou, `GENERATED`, orfao fica, anti-spam de falha, `force` p/ transitivo).
+- [x] 108. Remover `GnumarusLispToGdscriptTranspilerGdlImport*` (import plugin era a ferramenta errada: destino sempre `.godot/imported`).
+- [x] 109. `GnumarusLispToGdscriptTranspilerLispPluginImpl` observador: `filesystem_changed` + item manual, `transpile_sidecars` (hash de conteudo, so reescreve se mudou, `GENERATED`, orfao fica, anti-spam de falha, `force` p/ transitivo).
 - [x] 110. Auto-add de `gdl` em `textfile_extensions` ao ativar (persiste no exit; `.gdl` abre como texto, sem parsing GDScript).
 - [x] 111. Bateria `_test_watcher` (round-trip, quietude, reedicao, falha, orfao, raiz ausente); sem ligar no `project.godot` (fixtures quebrados).
 - [x] 112. Revalidar: TestRunner 0 falhas + `--check-only` nos `.gd` (inclui plugin/impl).
 
 ## Revisao v3.1 — EditorImportPlugin `.gdl` (addon de verdade)
 
-- [x] 104. Regra nova do AGENTS.md: proxies burros (`GnumarusGdlImport`, `GnumarusLispPlugin`) + impls `RefCounted` (`GnumarusGdlImportImpl`, `GnumarusLispPluginImpl`) + `plugin.cfg`.
+- [x] 104. Regra nova do AGENTS.md: proxies burros (`GnumarusLispToGdscriptTranspilerGdlImport`, `GnumarusLispToGdscriptTranspilerLispPlugin`) + impls `RefCounted` (`GnumarusLispToGdscriptTranspilerGdlImportImpl`, `GnumarusLispToGdscriptTranspilerLispPluginImpl`) + `plugin.cfg`.
 - [x] 105. Importer `gnumarus.gdl`: extensao `gdl`, saida `gd`, tipo `Script`, 1 preset; `_import` transpila e escreve (OK / ERR_FILE_NOT_FOUND / ERR_PARSE_ERROR / ERR_CANT_CREATE).
 - [x] 106. Bateria `_test_import_plugin` (metadados via proxy, round-trip em `./tmp`, falhas, wiring do plugin); sem ligar no `project.godot` (fixtures quebrados de proposito poluiriam o import).
 - [x] 107. Revalidar: TestRunner 0 falhas + `--check-only` nos `.gd` (inclui proxies/impls) + ativacao temporaria provando o `plugin.cfg`.
@@ -91,21 +101,21 @@ Legenda: `[x]` feito, `[ ]` pendente/futuro.
 
 ## Revisao v2.3 — macros `(defmacro ...)` + `join` + `...rest`
 
-- [x] 89. Nova classe `GnumarusMacroExpander` (substituicao crua, rest por ultimo, join em corpos, ponto-fixo com orcamento 1024).
+- [x] 89. Nova classe `GnumarusLispToGdscriptTranspilerMacroExpander` (substituicao crua, rest por ultimo, join em corpos, ponto-fixo com orcamento 1024).
 - [x] 90. Fiacao na fachada (macro apos template, antes do transpiler) + guards dangling (63 operacoes).
 - [x] 91. Fixture `tests/macros/` + bateria `_test_macros` + `safe-call` no `StressTest`.
 - [x] 92. Revalidar: TestRunner 0 falhas + `--check-only` nos `.gd` esperados.
 
 ## Revisao v2.2 — heranca de templates `(block ...)` (meta-template Jinja)
 
-- [x] 85. Nova classe `GnumarusTemplateResolver` (override por splice, filho estrito, nomes planos, includes por lado, cadeia + pilha + limite 32).
+- [x] 85. Nova classe `GnumarusLispToGdscriptTranspilerTemplateResolver` (override por splice, filho estrito, nomes planos, includes por lado, cadeia + pilha + limite 32).
 - [x] 86. Fiacao na fachada (template apos parse, antes do transpiler) + guards dangling (61 operacoes).
 - [x] 87. Fixtures `tests/templates/` + bateria `_test_templates` no runner.
 - [x] 88. Revalidar: TestRunner 0 falhas + `--check-only` nos `.gd` esperados.
 
 ## Revisao v2.1 — includes `(include ...)` (meta-template, fase 2)
 
-- [x] 81. Nova classe `GnumarusIncludeResolver` (splice recursivo, 4 formas de caminho, pilha canonica + limite 32).
+- [x] 81. Nova classe `GnumarusLispToGdscriptTranspilerIncludeResolver` (splice recursivo, 4 formas de caminho, pilha canonica + limite 32).
 - [x] 82. Fiacao na fachada (pipeline tokenizer→parser→includes→transpiler) + guarda dangling no transpiler (59 operacoes).
 - [x] 83. Fixtures `tests/includes/` + bateria `_test_includes` no runner.
 - [x] 84. Revalidar: TestRunner 0 falhas + `--check-only` nos `.gd` esperados.

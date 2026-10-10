@@ -24,12 +24,12 @@
 ## and generated iterations (self- and mutually-recursive macros fail instead
 ## of hanging). Runs after template resolution and before transpiling.
 ## Non-string heads never match — never crash.
-class_name GnumarusMacroExpander
+class_name GnumarusLispToGdscriptTranspilerMacroExpander
 extends RefCounted
 
 
 ## Transpiler script, loaded by path (reserved-name check only).
-const TranspilerScript = preload("res://addons/GnumarusLispToGdscriptTranspiler/GnumarusTranspiler.gd")
+const TranspilerScript = preload("res://addons/0GnumarusLispToGdscriptTranspiler/GnumarusLispToGdscriptTranspilerTranspiler.gd")
 ## Maximum total node expansions before giving up (recursion guard).
 const MAX_MACRO_EXPANSIONS: int = 1024
 ## Maximum nested macro expansions (depth guard: GDScript stacks overflow

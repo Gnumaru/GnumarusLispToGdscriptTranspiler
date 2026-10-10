@@ -1,6 +1,6 @@
 ## Syntactic transpiler from the Lisp tree to GDScript source code.
 ##
-## Walks the GnumarusParser nested tree and emits a String of valid GDScript.
+## Walks the GnumarusLispToGdscriptTranspilerParser nested tree and emits a String of valid GDScript.
 ## The Lisp-to-GDScript mapping lives in the _operations table (operation
 ## name -> emitter Callable), so new operations can extend the transpiler
 ## without changing the traversal. It performs no semantic validation: pure
@@ -12,7 +12,7 @@
 ## to "double pack": pack it in Lisp AND write the GDScript quotes inside,
 ## e.g. (var a String = "\"hi\"") emits var a: String = "hi". The same hatch
 ## covers any literal unrepresentable as bare atoms, e.g. "Vector2(1, 2)".
-class_name GnumarusTranspiler
+class_name GnumarusLispToGdscriptTranspilerTranspiler
 extends RefCounted
 
 

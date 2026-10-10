@@ -1,18 +1,18 @@
 ## Dumb editor proxy for the Gnumarus `.gdl` syntax highlighter.
 ##
 ## Per the addon rule, this class holds no logic: it instantiates
-## GnumarusGdlHighlighterImpl in _init (passing itself) and every function
+## GnumarusLispToGdscriptTranspilerGdlHighlighterImpl in _init (passing itself) and every function
 ## below only delegates to the identically-named implementation method.
 ## The single exception is _create: the engine requires an
 ## EditorSyntaxHighlighter instance and the RefCounted implementation cannot
 ## satisfy that return type, so the one-line factory lives here.
 @tool
-class_name GnumarusGdlHighlighter
+class_name GnumarusLispToGdscriptTranspilerGdlHighlighter
 extends EditorSyntaxHighlighter
 
 
 ## Implementation script, loaded by path.
-const ImplScript = preload("res://addons/GnumarusLispToGdscriptTranspiler/GnumarusGdlHighlighterImpl.gd")
+const ImplScript = preload("res://addons/0GnumarusLispToGdscriptTranspiler/GnumarusLispToGdscriptTranspilerGdlHighlighterImpl.gd")
 
 
 ## Real implementation (built in _init, kept alive by this reference).
@@ -37,7 +37,7 @@ func _get_supported_languages() -> PackedStringArray:
 ## Per-editor instance factory (must return an EditorSyntaxHighlighter,
 ## which the RefCounted implementation cannot construct).
 func _create() -> EditorSyntaxHighlighter:
-	return GnumarusGdlHighlighter.new()
+	return GnumarusLispToGdscriptTranspilerGdlHighlighter.new()
 
 
 ## Colors one line for the editor (delegated).

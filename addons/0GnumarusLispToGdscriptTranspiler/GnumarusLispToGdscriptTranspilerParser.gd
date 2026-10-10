@@ -1,10 +1,10 @@
 ## Parser for the Gnumarus transpiler Lisp dialect.
 ##
-## Turns the GnumarusTokenizer flat token list into a nested tree: each paren
+## Turns the GnumarusLispToGdscriptTranspilerTokenizer flat token list into a nested tree: each paren
 ## pair becomes an Array, each atom stays a String. The top-level result is an
 ## Array of forms (lists or bare atoms). It interprets no meaning: that is
-## GnumarusTranspiler's job.
-class_name GnumarusParser
+## GnumarusLispToGdscriptTranspilerTranspiler's job.
+class_name GnumarusLispToGdscriptTranspilerParser
 extends RefCounted
 
 

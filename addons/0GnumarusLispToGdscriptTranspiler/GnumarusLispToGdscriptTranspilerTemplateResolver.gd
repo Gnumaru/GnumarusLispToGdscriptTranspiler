@@ -11,16 +11,16 @@
 ## grandparent) recurse; circular chains and excessive depth fail with clear
 ## errors. Runs after parsing (wrapping includes) and before transpiling.
 ## Non-string heads never match — never crash.
-class_name GnumarusTemplateResolver
+class_name GnumarusLispToGdscriptTranspilerTemplateResolver
 extends RefCounted
 
 
 ## Tokenizer script, loaded by path.
-const TokenizerScript = preload("res://addons/GnumarusLispToGdscriptTranspiler/GnumarusTokenizer.gd")
+const TokenizerScript = preload("res://addons/0GnumarusLispToGdscriptTranspiler/GnumarusLispToGdscriptTranspilerTokenizer.gd")
 ## Parser script, loaded by path.
-const ParserScript = preload("res://addons/GnumarusLispToGdscriptTranspiler/GnumarusParser.gd")
+const ParserScript = preload("res://addons/0GnumarusLispToGdscriptTranspiler/GnumarusLispToGdscriptTranspilerParser.gd")
 ## Include resolver script, loaded by path (per-side include resolution).
-const IncludesScript = preload("res://addons/GnumarusLispToGdscriptTranspiler/GnumarusIncludeResolver.gd")
+const IncludesScript = preload("res://addons/0GnumarusLispToGdscriptTranspiler/GnumarusLispToGdscriptTranspilerIncludeResolver.gd")
 ## Maximum template inheritance depth (bounds even aliasing-evaded cycles).
 const MAX_TEMPLATE_DEPTH: int = 32
 

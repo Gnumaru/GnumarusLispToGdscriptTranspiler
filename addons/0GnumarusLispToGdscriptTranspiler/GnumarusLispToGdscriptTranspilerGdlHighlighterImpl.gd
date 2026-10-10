@@ -1,19 +1,19 @@
-## Real implementation behind the GnumarusGdlHighlighter editor proxy.
+## Real implementation behind the GnumarusLispToGdscriptTranspilerGdlHighlighter editor proxy.
 ##
-## Owns the GnumarusGdlColorizer, syncs its theme colors from the editor
+## Owns the GnumarusLispToGdscriptTranspilerGdlColorizer, syncs its theme colors from the editor
 ## settings (so `.gdl` sources follow the user's GDScript colors, including
 ## custom themes) and memoizes per-line color maps by document hash plus
 ## theme hash (theme edits recompute even when the text is unchanged).
 ## Editor calls go through the proxy (kept from the constructor); the color
 ## engine itself stays headless-safe (null proxy yields empty maps).
-class_name GnumarusGdlHighlighterImpl
+class_name GnumarusLispToGdscriptTranspilerGdlHighlighterImpl
 extends RefCounted
 
 
 ## Colorizer script, loaded by path.
-const ColorizerScript = preload("res://addons/GnumarusLispToGdscriptTranspiler/GnumarusGdlColorizer.gd")
+const ColorizerScript = preload("res://addons/0GnumarusLispToGdscriptTranspiler/GnumarusLispToGdscriptTranspilerGdlColorizer.gd")
 ## Theme script, loaded by path (setting keys).
-const ThemeScript = preload("res://addons/GnumarusLispToGdscriptTranspiler/GnumarusGdlTheme.gd")
+const ThemeScript = preload("res://addons/0GnumarusLispToGdscriptTranspiler/GnumarusLispToGdscriptTranspilerGdlTheme.gd")
 ## Highlighter display version (bumped when the coloring rules change, so
 ## the script editor dropdown tells which rules are actually running).
 const HIGHLIGHTER_VERSION: String = "3.8"

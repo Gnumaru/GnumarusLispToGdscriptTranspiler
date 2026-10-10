@@ -5,10 +5,10 @@
 ## same colors without any context: each known word always maps to the same
 ## color. Gnumarus-only operations get an invented lime tint (no Godot
 ## equivalent exists for them). Dynamic per-user values arrive later through
-## GnumarusGdlColorizer.configure (fed by the highlighter impl from
+## GnumarusLispToGdscriptTranspilerGdlColorizer.configure (fed by the highlighter impl from
 ## EditorSettings); the constants below are only the dark-theme fallbacks used
 ## headless and before the first editor sync. Pure data, fully testable.
-class_name GnumarusGdlTheme
+class_name GnumarusLispToGdscriptTranspilerGdlTheme
 extends RefCounted
 
 

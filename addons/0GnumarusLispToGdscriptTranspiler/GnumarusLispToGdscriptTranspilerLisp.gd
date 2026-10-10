@@ -6,20 +6,20 @@
 ## failing stage ("tokenizer: ...", "parser: ...", "template: ...",
 ## "macro: ...", "transpiler: ..."). Uses internal preloads to avoid
 ## depending on the editor's global class cache.
-class_name GnumarusLisp
+class_name GnumarusLispToGdscriptTranspilerLisp
 extends RefCounted
 
 
 ## Tokenizer script, loaded by path.
-const TokenizerScript = preload("res://addons/GnumarusLispToGdscriptTranspiler/GnumarusTokenizer.gd")
+const TokenizerScript = preload("res://addons/0GnumarusLispToGdscriptTranspiler/GnumarusLispToGdscriptTranspilerTokenizer.gd")
 ## Parser script, loaded by path.
-const ParserScript = preload("res://addons/GnumarusLispToGdscriptTranspiler/GnumarusParser.gd")
+const ParserScript = preload("res://addons/0GnumarusLispToGdscriptTranspiler/GnumarusLispToGdscriptTranspilerParser.gd")
 ## Template resolver script, loaded by path (includes + block inheritance).
-const TemplateScript = preload("res://addons/GnumarusLispToGdscriptTranspiler/GnumarusTemplateResolver.gd")
+const TemplateScript = preload("res://addons/0GnumarusLispToGdscriptTranspiler/GnumarusLispToGdscriptTranspilerTemplateResolver.gd")
 ## Macro expander script, loaded by path (user-defined syntactic macros).
-const MacroScript = preload("res://addons/GnumarusLispToGdscriptTranspiler/GnumarusMacroExpander.gd")
+const MacroScript = preload("res://addons/0GnumarusLispToGdscriptTranspiler/GnumarusLispToGdscriptTranspilerMacroExpander.gd")
 ## Transpiler script, loaded by path.
-const TranspilerScript = preload("res://addons/GnumarusLispToGdscriptTranspiler/GnumarusTranspiler.gd")
+const TranspilerScript = preload("res://addons/0GnumarusLispToGdscriptTranspiler/GnumarusLispToGdscriptTranspilerTranspiler.gd")
 
 
 ## Transpiles Lisp source text to GDScript.

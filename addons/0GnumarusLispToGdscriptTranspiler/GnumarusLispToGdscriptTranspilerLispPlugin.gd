@@ -1,15 +1,15 @@
 ## Dumb editor proxy for the Gnumarus Lisp addon.
 ##
 ## Per the addon rule, this class holds no logic: it instantiates
-## GnumarusLispPluginImpl in _init (passing itself) and every function below
+## GnumarusLispToGdscriptTranspilerLispPluginImpl in _init (passing itself) and every function below
 ## only delegates to the identically-named implementation method.
 @tool
-class_name GnumarusLispPlugin
+class_name GnumarusLispToGdscriptTranspilerLispPlugin
 extends EditorPlugin
 
 
 ## Implementation script, loaded by path.
-const PluginImplScript = preload("res://addons/GnumarusLispToGdscriptTranspiler/GnumarusLispPluginImpl.gd")
+const PluginImplScript = preload("res://addons/0GnumarusLispToGdscriptTranspiler/GnumarusLispToGdscriptTranspilerLispPluginImpl.gd")
 
 
 ## Real implementation (built in _init, kept alive by this reference).

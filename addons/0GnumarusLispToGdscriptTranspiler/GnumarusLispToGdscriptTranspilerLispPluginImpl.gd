@@ -1,4 +1,4 @@
-## Real implementation behind the GnumarusLispPlugin editor proxy.
+## Real implementation behind the GnumarusLispToGdscriptTranspilerLispPlugin editor proxy.
 ##
 ## Watches `.gdl` files and transpiles them to sibling `.gd` files (same
 ## directory, never `.godot/imported`): on editor start it connects to the
@@ -9,14 +9,14 @@
 ## source changes again. Deleted sources leave their orphan `.gd` behind.
 ## Editor calls go through the proxy (kept from the constructor); the
 ## transpile core takes explicit paths and is fully testable headless.
-class_name GnumarusLispPluginImpl
+class_name GnumarusLispToGdscriptTranspilerLispPluginImpl
 extends RefCounted
 
 
 ## Facade script, loaded by path (avoids the global class cache).
-const FacadeScript = preload("res://addons/GnumarusLispToGdscriptTranspiler/GnumarusLisp.gd")
+const FacadeScript = preload("res://addons/0GnumarusLispToGdscriptTranspiler/GnumarusLispToGdscriptTranspilerLisp.gd")
 ## Highlighter script, loaded by path (registered with the script editor).
-const HighlighterScript = preload("res://addons/GnumarusLispToGdscriptTranspiler/GnumarusGdlHighlighter.gd")
+const HighlighterScript = preload("res://addons/0GnumarusLispToGdscriptTranspiler/GnumarusLispToGdscriptTranspilerGdlHighlighter.gd")
 ## Editor setting holding the comma-separated text file extensions.
 const TEXTFILE_EXTENSIONS_SETTING: String = "docks/filesystem/textfile_extensions"
 ## Project tool menu item name for manual transpilation.
@@ -24,7 +24,7 @@ const TOOL_MENU_NAME: String = "Transpile Gnumarus files"
 ## Project path holding the addon self-test fixtures (never watcher
 ## inputs: its `.gd` files are expected test outputs, not build artifacts,
 ## so saving a `.gdl` while hacking the addon cannot stamp them).
-const ADDON_TESTS_ROOT: String = "res://addons/GnumarusLispToGdscriptTranspiler/tests"
+const ADDON_TESTS_ROOT: String = "res://addons/0GnumarusLispToGdscriptTranspiler/tests"
 ## First line stamped on generated files (source name appended).
 const GENERATED_STAMP: String = "# GENERATED FROM %s BY GNUMARUS - DO NOT EDIT"
 

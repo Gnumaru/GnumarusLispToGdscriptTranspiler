@@ -14,16 +14,16 @@
 ## operations never rot the highlighting), so they read apart from
 ## GDScript words at a glance. Theme colors arrive through
 ## configure (the highlighter impl feeds EditorSettings values); the
-## GnumarusGdlTheme dark defaults apply headless and before the first sync.
+## GnumarusLispToGdscriptTranspilerGdlTheme dark defaults apply headless and before the first sync.
 ## Pure data logic, fully testable without the editor.
-class_name GnumarusGdlColorizer
+class_name GnumarusLispToGdscriptTranspilerGdlColorizer
 extends RefCounted
 
 
 ## Transpiler script, loaded by path (live operation list only).
-const TranspilerScript = preload("res://addons/GnumarusLispToGdscriptTranspiler/GnumarusTranspiler.gd")
+const TranspilerScript = preload("res://addons/0GnumarusLispToGdscriptTranspiler/GnumarusLispToGdscriptTranspilerTranspiler.gd")
 ## Theme script, loaded by path (word lists and fallback colors).
-const ThemeScript = preload("res://addons/GnumarusLispToGdscriptTranspiler/GnumarusGdlTheme.gd")
+const ThemeScript = preload("res://addons/0GnumarusLispToGdscriptTranspiler/GnumarusLispToGdscriptTranspilerGdlTheme.gd")
 ## Rainbow palette, one hue per nesting depth (cycles).
 const RAINBOW_COLORS: Array = [
 	Color(0.95, 0.35, 0.35),
@@ -46,7 +46,7 @@ const INDENT_DARKEN: float = 0.25
 
 ## Active color per category name (synced from the theme, see configure).
 var _colors: Dictionary = {}
-## Gnumarus-only operation names (live transpiler table, keyword fallback).
+## Gnumarus-only operation names (live transpiler table, lime tint).
 var _gdl_ops: Dictionary = {}
 ## GDScript control-flow keywords for O(1) lookup.
 var _control_flow: Dictionary = {}
@@ -71,7 +71,7 @@ var _indent_colors: Array = []
 func _init() -> void:
 	# Fallback colors (the impl overwrites them with EditorSettings values).
 	_colors = ThemeScript.default_colors()
-	# Gnumarus operations as keyword fallback (never rots when ops are added).
+	# Gnumarus operations as lime-tinted ops (never rots when ops are added).
 	var probe: RefCounted = TranspilerScript.new()
 	for op in probe.operation_names():
 		_gdl_ops[op] = true
