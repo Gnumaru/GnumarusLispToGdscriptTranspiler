@@ -153,6 +153,10 @@ Example:
 - **Where allowed**: any level.
 - **Where invalid**: list arguments (atoms only).
 
+Line comments (`;` and `#` to end of line) are separate from this
+operation: the tokenizer discards them anywhere outside packed spans,
+so `(var a) ; trailing` transpiles to `var a`.
+
 ### `pass` — `(pass)`
 
 Emits `pass`. Example:

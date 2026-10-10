@@ -51,6 +51,7 @@ func _init() -> void:
 	_test_tokenizer_basic()
 	_test_tokenizer_strings()
 	_test_tokenizer_errors()
+	_test_line_comments()
 	_test_parser()
 	_test_parser_errors()
 	_test_var_forms()
@@ -169,6 +170,39 @@ func _test_tokenizer_errors() -> void:
 	# Backslash as the very last character of the text.
 	var r2: Dictionary = TokenizerScript.tokenize("(var a\\")
 	_check("tokenizer error: lone backslash", r2["ok"] == false, str(r2))
+
+
+## Tests of ;- and #-to-end-of-line comments: discarded anywhere outside
+## packed spans (even mid-atom, swallowing structure), kept when escaped
+## or packed, and painted with the comment color.
+func _test_line_comments() -> void:
+	# Full-line and trailing comments vanish before parsing.
+	var r1: Dictionary = TokenizerScript.tokenize("; leading\n(var a) ; trailing\n# hash too")
+	_check_eq("line comment: tokens", r1["tokens"], ["(", "var", "a", ")"])
+	# Starters work mid-atom and swallow structure (the eaten paren unbalances).
+	var r2: Dictionary = TokenizerScript.tokenize("(var a;b)\n(pass)")
+	_check_eq("line comment: mid atom", r2["tokens"], ["(", "var", "a", "(", "pass", ")"])
+	# Escaped starters stay literal atoms.
+	var r3: Dictionary = TokenizerScript.tokenize("(var a\\;b c\\#d)")
+	_check_eq("line comment: escaped", r3["tokens"], ["(", "var", "a;b", "c#d", ")"])
+	# Packed spans protect starters (both delimiter kinds).
+	var r4: Dictionary = TokenizerScript.tokenize("(comment \"a;b#c\")")
+	_check_eq("line comment: packed", r4["tokens"], ["(", "comment", "a;b#c", ")"])
+	# Comment at EOF without a newline, and CR endings.
+	var r5: Dictionary = TokenizerScript.tokenize("(pass);tail")
+	_check_eq("line comment: eof", r5["tokens"], ["(", "pass", ")"])
+	var r6: Dictionary = TokenizerScript.tokenize("(var a)\r\n;#c\r\n(pass)")
+	_check_eq("line comment: cr", r6["tokens"], ["(", "var", "a", ")", "(", "pass", ")"])
+	# Comment-only source transpiles to empty output.
+	_check_transpiles("line comment: only", "; nothing here", "")
+	# Colorizer paints comment runs, not escaped or packed starters.
+	var colorizer: RefCounted = ColorizerScript.new()
+	var defaults: Dictionary = ThemeScript.DEFAULT_COLORS
+	var maps: Array = colorizer.compute_all(PackedStringArray(["(var a) ; note", "# full", "(comment \"a;b\")", "(var x\\;y)"]))
+	_check_eq("line comment: color", maps[0][9]["color"], defaults["comment"])
+	_check_eq("line comment: full", maps[1][0]["color"], defaults["comment"])
+	_check_eq("line comment: packed", maps[2][11]["color"], defaults["string"])
+	_check_eq("line comment: escaped", maps[3][7]["color"], defaults["text"])
 
 
 ## Parser tests: flat list becomes a nested list tree.

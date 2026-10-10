@@ -55,6 +55,10 @@ com mensagem em portugues.
 - `\` escapa o proximo caractere em qualquer posicao: `\"` vira `"`,
   `\\` vira `\`, `\(` vira `(` literal, etc.
 - `""` (par vazio) gera um atomo vazio valido (ex.: `(comment "")`).
+- Comentarios de linha: `;` e `#` fora de trechos empacotados descartam
+  o resto da linha ate LF/CR, em qualquer ponto (inclusive no meio de
+  um atomo, engolindo estrutura); escapar (`\;`, `\#`) ou empacotar
+  (`"a;b"`) mantem o literal.
 - Erros: string empacotada nao terminada, backslash solto no fim do texto.
 
 ## 4. Sintaxe Lisp da v1 (tabela de operacoes)

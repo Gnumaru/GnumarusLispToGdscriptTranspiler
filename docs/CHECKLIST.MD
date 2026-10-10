@@ -17,6 +17,11 @@ Legenda: `[x]` feito, `[ ]` pendente/futuro.
 - [x] 11. Validacao — importar o projeto headless, rodar o TestRunner e checar `--check-only` nos `.gd` gerados/esperados.
 - [x] 12. Documentacao — comentarios `##`/`#` em toda classe, funcao e variavel.
 
+## Revisao v3.14 — comentarios de linha `;`/`#`
+
+- [x] 142. Tokenizer descarta `;`/`#` ate LF/CR em qualquer ponto fora de empacotados (inclusive mid-atomo); `\;`/`\#` e empacotados preservam; colorizador pinta com a cor `comment`.
+- [x] 143. Bateria `_test_line_comments` (tokens, escapes, packed, EOF, CR, trailing, transpile vazio, cores); TestRunner 815/815 + `--check-only`.
+
 ## Revisao v3.13 — `chain` + alvos-call aninhados
 
 - [x] 140. Nova operacao `chain` (`(chain raiz elos...)`, elos-metodo e elos-propriedade com atomo nu, raiz aninhavel; statement, valor e operando) + alvos `call` como expressoes (invocacao do retorno); raiz/elos no `_is_value_slot`.

@@ -10,7 +10,10 @@
 ## - atoms without whitespace, parens, backslash or delimiters need no quotes;
 ## - "packed" spans use " ' ` or ´, without mixing the opening/closing pair;
 ##   packed content is appended to the atom in progress;
-## - a backslash (\) escapes the next character in any position.
+## - a backslash (\) escapes the next character in any position;
+## - ";" and "#" start a line comment anywhere outside packed spans
+##   (even mid-atom): the rest of the line is discarded up to LF/CR.
+##   Escape them (\; \#) or pack them ("a;b") to keep them literal.
 class_name GnumarusLispToGdscriptTranspilerTokenizer
 extends RefCounted
 
@@ -23,6 +26,10 @@ const BACKSLASH_CODE: int = 92
 const OPEN_PAREN_CODE: int = 40
 ## Codepoint of the structural close paren.
 const CLOSE_PAREN_CODE: int = 41
+## Codepoint of the semicolon, a line comment starter.
+const SEMICOLON_CODE: int = 59
+## Codepoint of the hash, a line comment starter.
+const HASH_CODE: int = 35
 
 
 ## Tells whether a Unicode codepoint separates atoms.
@@ -36,7 +43,8 @@ static func is_delimiter(p_code: int) -> bool:
 	return p_code in DELIMITER_CODES
 
 
-## Splits source text into a flat token list.
+## Splits source text into a flat token list (`;`/`#` line comments
+## discarded along the way).
 ## Returns {"ok": true, "tokens": Array[String], "error": ""} on success, or
 ## {"ok": false, "tokens": [], "error": message} on unterminated span or
 ## trailing lone backslash.
@@ -105,10 +113,26 @@ static func tokenize(p_text: String) -> Dictionary:
 		if code == BACKSLASH_CODE:
 			if i + 1 >= n:
 				return {"ok": false, "tokens": [], "error": "lone backslash at the end of the text"}
-			# Escapes outside packed spans too (e.g. \( becomes a literal "(").
+			# Escapes outside packed spans too (e.g. \( becomes a literal "(",
+			# \; and \# stay literal instead of starting comments).
 			atom += p_text.substr(i + 1, 1)
 			atom_active = true
 			i += 2
+			continue
+		if code == SEMICOLON_CODE or code == HASH_CODE:
+			# Line comment anywhere (even mid-atom): flush the atom in
+			# progress, then discard raw characters up to (not including)
+			# the next line break (delimiters inside never count).
+			if atom_active:
+				tokens.append(atom)
+				atom = ""
+				atom_active = false
+			while i < n:
+				# Codepoint under the comment skip.
+				var skip: int = p_text.unicode_at(i)
+				if skip == 10 or skip == 13:
+					break
+				i += 1
 			continue
 		if code in DELIMITER_CODES:
 			# Opens a packed span without breaking the atom in progress.

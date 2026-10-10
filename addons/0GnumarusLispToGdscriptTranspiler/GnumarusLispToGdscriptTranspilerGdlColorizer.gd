@@ -5,7 +5,8 @@
 ## in the `{column: {"color": Color}}` shape the editor expects: rainbow
 ## parens by nesting depth (unbalanced closers in error red), indent blocks
 ## by width level (dimmed rainbow; visible with View Whitespace on),
-## packed spans with the GDScript string color, numbers with the GDScript
+## packed spans with the GDScript string color, `;`/`#` line comments
+## with the comment color, numbers with the GDScript
 ## number color, `@` atoms with the GDScript annotation color, and bare
 ## atoms with the exact GDScript color of their word class (plain keywords,
 ## control-flow keywords kept separate, base types, engine classes, global
@@ -36,6 +37,8 @@ const RAINBOW_COLORS: Array = [
 ]
 ## Packed-span delimiter codepoints: " ' ` ´.
 const DELIMITER_CODES: Array = [34, 39, 96, 180]
+## Line comment starter codepoints: ";" and "#" (outside packed spans).
+const COMMENT_CODES: Array = [59, 35]
 ## Unbalanced closer and lone "@" color (no editor setting exists for
 ## errors, so this red stays constant across themes).
 const ERROR_COLOR: Color = Color(1.0, 0.25, 0.25)
@@ -187,6 +190,8 @@ func compute_all(p_lines: PackedStringArray) -> Array:
 	var string_color: Color = get_color("string")
 	# Default gray for gaps and classless segments (synced from the theme).
 	var text_color: Color = get_color("text")
+	# Comment gray for ;- and #-to-end-of-line runs (synced from the theme).
+	var comment_color: Color = get_color("comment")
 	for li in range(p_lines.size()):
 		# Current source line under coloring.
 		var line: String = p_lines[li]
@@ -247,11 +252,19 @@ func compute_all(p_lines: PackedStringArray) -> Array:
 				i += 1
 				continue
 			if code == 92:
-				# Escaped character joins the atom (never structural).
+				# Escaped character joins the atom (never structural, and
+				# never a comment starter: \; and \# stay literal).
 				if atom_start < 0:
 					atom_start = i
 				i += 2 if i + 1 < line.length() else 1
 				continue
+			if code in COMMENT_CODES:
+				# Line comment: flush the atom, paint through end of line.
+				_paint_atom(map, line, atom_start, i)
+				atom_start = -1
+				for c in range(i, line.length()):
+					map[c] = {"color": comment_color}
+				break
 			if code in DELIMITER_CODES:
 				_paint_atom(map, line, atom_start, i)
 				atom_start = -1
