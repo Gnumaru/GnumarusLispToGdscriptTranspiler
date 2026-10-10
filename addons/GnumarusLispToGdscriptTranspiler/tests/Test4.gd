@@ -1,3 +1,4 @@
+# GENERATED FROM Test4.gdl BY GNUMARUS - DO NOT EDIT
 class_name MatchDemo
 extends Node
 func describe(x):

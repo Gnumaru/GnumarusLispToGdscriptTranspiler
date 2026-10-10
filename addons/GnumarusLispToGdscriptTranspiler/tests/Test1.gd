@@ -1,3 +1,4 @@
+# GENERATED FROM Test1.gdl BY GNUMARUS - DO NOT EDIT
 class_name MyClass
 extends Node
 var a

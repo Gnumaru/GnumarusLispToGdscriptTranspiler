@@ -1,3 +1,4 @@
+# GENERATED FROM Test5.gdl BY GNUMARUS - DO NOT EDIT
 class_name InnerDemo
 extends Node
 var title: String = "demo"

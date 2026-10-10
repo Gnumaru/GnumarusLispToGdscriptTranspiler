@@ -1,3 +1,4 @@
+# GENERATED FROM StressTest.gdl BY GNUMARUS - DO NOT EDIT
 @tool
 class_name StressTest
 extends Node

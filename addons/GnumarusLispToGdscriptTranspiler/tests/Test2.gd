@@ -1,3 +1,4 @@
+# GENERATED FROM Test2.gdl BY GNUMARUS - DO NOT EDIT
 class_name OtherClass
 extends Node
 signal health_changed

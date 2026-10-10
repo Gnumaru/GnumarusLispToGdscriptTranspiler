@@ -1,3 +1,4 @@
+# GENERATED FROM Test3.gdl BY GNUMARUS - DO NOT EDIT
 class_name FlowDemo
 extends Node
 func check(x):

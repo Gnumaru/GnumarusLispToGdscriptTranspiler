@@ -1,3 +1,4 @@
+# GENERATED FROM macros.gdl BY GNUMARUS - DO NOT EDIT
 class_name MacroDemo
 extends Node
 func greet(name):

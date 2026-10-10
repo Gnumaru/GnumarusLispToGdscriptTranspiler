@@ -1,3 +1,4 @@
+# GENERATED FROM main.gdl BY GNUMARUS - DO NOT EDIT
 class_name IncludeDemo
 extends Node
 var shared_count: int = 0
