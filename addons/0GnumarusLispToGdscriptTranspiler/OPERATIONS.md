@@ -1,33 +1,34 @@
-# OPERATIONS.md — Operações do transpilador Gnumarus Lisp → GDScript
+# OPERATIONS.md — Gnumarus Lisp → GDScript transpiler operations
 
-Referência de todas as 72 operações implementadas: nome, descrição, onde
-cada forma pode aparecer, onde é inválido usá-la e exemplos de uso com a
-saída GDScript produzida. Todos os exemplos abaixo foram executados no
-transpilador (ou são fixtures comparados byte a byte pela suite).
+Reference for all 72 implemented operations: name, description, where
+each form may appear, where using it is invalid, and usage examples with
+the produced GDScript output. Every example below was executed on the
+transpiler (or is a fixture compared byte for byte by the suite).
 
-## Como ler este documento
+## How to read this document
 
-- **Contextos**: `top` (nível do arquivo), `member` (corpo de classe),
-  `local` (corpo de função). O transpilador rejeita a forma fora do seu
-  contexto com mensagem de uso.
-- **Statement vs valor**: algumas operações valem como statement (linha
-  solta) e como valor (default de `var`, `return`, argumento, operando);
-  outras são só statement. Operações de meta-template e macros somem
-  antes da transpilação (fases de include, herança e expansão).
-- **Regra verbatim**: átomos saem como fonte GDScript exatamente como
-  escritos. Literal string GDScript exige empacotamento duplo
-  (empacotar no Lisp E escrever as aspas por dentro), ex.
-  `(var a String = "\"hi\"")` gera `var a: String = "hi"`.
-- **Dangling**: formas que só valem em posição especial (`elif`, `branch`,
-  `lambda` solta...) falham com erro de uso se alcançarem o transpilador
-  fora dela.
+- **Contexts**: `top` (file level), `member` (class body),
+  `local` (function body). The transpiler rejects out-of-context forms
+  with a usage message.
+- **Statement vs value**: some operations work as statements (bare line)
+  and as values (`var` default, `return`, argument, operand); others are
+  statement-only. Meta-template and macro operations vanish before
+  transpilation (include, inheritance and expansion phases).
+- **Verbatim rule**: atoms come out as GDScript source exactly as
+  written. A GDScript string literal requires double packing
+  (pack it in Lisp AND write the quotes inside), e.g.
+  `(var a String = "\"hi\"")` produces `var a: String = "hi"`.
+- **Dangling**: forms only valid in a special position (`elif`,
+  `branch`, bare `lambda`...) fail with a usage error when they reach
+  the transpiler outside of it.
 
-## 1. Declarações
+## 1. Declarations
 
-### `class-name` — `(class-name Nome)`
+### `class-name` — `(class-name Name)`
 
-Declara `class_name Nome`, com `@` líderes opcionais (um por linha).
-Exemplo:
+Declares `class_name Name`, with optional leading `@` atoms (one per
+line).
+Example:
 
 ```lisp
 (class-name MyClass)
@@ -37,13 +38,13 @@ Exemplo:
 class_name MyClass
 ```
 
-- **Onde pode**: só em `top`.
-- **Onde é inválido**: dentro de `class` ou `func` (erro de posicionamento).
+- **Where allowed**: `top` only.
+- **Where invalid**: inside `class` or `func` (placement error).
 
 ### `extends` — `(extends Base)`
 
-Declara `extends Base`, com `@` líderes opcionais.
-Exemplo:
+Declares `extends Base`, with optional leading `@` atoms.
+Example:
 
 ```lisp
 (extends Node)
@@ -53,14 +54,15 @@ Exemplo:
 extends Node
 ```
 
-- **Onde pode**: `top` e corpos de `class` (herança de classe interna).
-- **Onde é inválido**: dentro de `func`.
+- **Where allowed**: `top` and `class` bodies (inner-class inheritance).
+- **Where invalid**: inside `func`.
 
-### `var` — `(var nome)` / `(var nome Tipo)` / `(var nome = v)` / `(var nome := v)` / `(var nome Tipo = v)`
+### `var` — `(var name)` / `(var name Type)` / `(var name = v)` / `(var name := v)` / `(var name Type = v)`
 
-Declara variável nas 5 formas posicionais. O `=` antes do default é
-**obrigatório**; `:=` é inferência (nunca combinado com tipo).
-Exemplos:
+Declares a variable in the 5 positional forms. The `=` before the
+default is **mandatory**; `:=` is inference (never combined with a
+type).
+Examples:
 
 ```lisp
 (var a)
@@ -78,7 +80,7 @@ var n := 10
 var c: float = 0.0
 ```
 
-Inválido (falha com mensagem de uso):
+Invalid (fails with a usage message):
 
 ```lisp
 (var a String 5)
@@ -86,13 +88,14 @@ Inválido (falha com mensagem de uso):
 
 > `transpiler: missing '=' before default value: usage (var a String = value)`
 
-- **Onde pode**: qualquer nível (`top`, `member`, `local`).
-- **Onde é inválido**: `(var nome Tipo := v)` (o próprio GDScript rejeita);
-  acessores `(get ...)`/`(set ...)` trailing só em membros (ver `get`/`set`).
+- **Where allowed**: any level (`top`, `member`, `local`).
+- **Where invalid**: `(var name Type := v)` (plain GDScript rejects it);
+  trailing `(get ...)`/`(set ...)` accessors only on members (see
+  `get`/`set`).
 
-### `static-var` — como `var`, com `static`
+### `static-var` — like `var`, with `static`
 
-Exemplo:
+Example:
 
 ```lisp
 (static-var n int = 1)
@@ -102,13 +105,13 @@ Exemplo:
 static var n: int = 1
 ```
 
-- **Onde pode**: `top` e corpos de `class`.
-- **Onde é inválido**: dentro de `func`; mesmas restrições do `var`.
+- **Where allowed**: `top` and `class` bodies.
+- **Where invalid**: inside `func`; same restrictions as `var`.
 
-### `const` — `(const nome = v)` / `(const nome := v)` / `(const nome Tipo = v)`
+### `const` — `(const name = v)` / `(const name := v)` / `(const name Type = v)`
 
-Declara constante (sempre com inicializador; valores só átomos).
-Exemplos:
+Declares a constant (always with an initializer; atom values only).
+Examples:
 
 ```lisp
 (const max = 10)
@@ -120,7 +123,7 @@ const max = 10
 const max: float = 10.0
 ```
 
-Inválido:
+Invalid:
 
 ```lisp
 (const a)
@@ -128,16 +131,16 @@ Inválido:
 
 > `transpiler: invalid 'const' form; usages: (const n = v), (const n := v), (const n T = v)`
 
-- **Onde pode**: qualquer nível, inclusive dentro de `func`.
-- **Onde é inválido**: sem valor; `(const n T := v)`; valor `(lambda ...)`
-  (o próprio Godot rejeita); sem anotacoes `@`.
+- **Where allowed**: any level, including inside `func`.
+- **Where invalid**: without a value; `(const n T := v)`; `(lambda ...)`
+  values (plain Godot rejects them); no `@` annotations.
 
-### `comment` — `(comment texto...)`
+### `comment` — `(comment text...)`
 
-Emite `# texto` (átomos unidos com espaço; vazio vira `#` nu). Como
-primeiro elemento do corpo de `func`/`lambda`, vira comentário trailing
-na linha de declaração em vez de linha própria.
-Exemplo:
+Emits `# text` (atoms joined with spaces; empty yields a bare `#`). As
+the first body element of `func`/`lambda`, it becomes a trailing
+comment on the declaration line instead of its own line.
+Example:
 
 ```lisp
 (comment hello world)
@@ -147,12 +150,12 @@ Exemplo:
 # hello world
 ```
 
-- **Onde pode**: qualquer nível.
-- **Onde é inválido**: argumentos que sejam listas (só átomos).
+- **Where allowed**: any level.
+- **Where invalid**: list arguments (atoms only).
 
 ### `pass` — `(pass)`
 
-Emite `pass`. Exemplo:
+Emits `pass`. Example:
 
 ```lisp
 (pass)
@@ -162,17 +165,17 @@ Emite `pass`. Exemplo:
 pass
 ```
 
-- **Onde pode**: qualquer nível.
-- **Onde é inválido**: com argumentos.
+- **Where allowed**: any level.
+- **Where invalid**: with arguments.
 
-### `func` — `(func nome (assinatura...) corpo...)`
+### `func` — `(func name (signature...) body...)`
 
-Declara `func nome(args...) [-> Ret]:` + corpo. Assinatura com retorno
-primeiro: `()` nada, `(void)` retorna `void` sem args, `(R (ARGS...))`
-retorna `R` com args agrupados; resto é arg plano
-(`...rest` passa literal). Argumento: átomo nu, `(n)`, `(n T)`,
-`(n = v)`, `(n := v)`, `(n T = v)`.
-Exemplo:
+Declares `func name(args...) [-> Ret]:` + body. Return-first
+signature: `()` nothing, `(void)` returns `void` with no args,
+`(R (ARGS...))` returns `R` with grouped args; anything else is a flat
+arg (`...rest` passes through literally). Argument: bare atom, `(n)`,
+`(n T)`, `(n = v)`, `(n := v)`, `(n T = v)`.
+Example:
 
 ```lisp
 (func _ready () (pass))
@@ -183,7 +186,7 @@ func _ready():
 	pass
 ```
 
-Com retorno e argumento tipado:
+With return type and typed argument:
 
 ```lisp
 (func f ((a int)) (pass))
@@ -197,7 +200,7 @@ func f() -> void:
 	pass
 ```
 
-Inválido (corpo vazio):
+Invalid (empty body):
 
 ```lisp
 (func f ())
@@ -205,13 +208,14 @@ Inválido (corpo vazio):
 
 > `transpiler: function 'f' has no body: GDScript requires at least one indented line`
 
-- **Onde pode**: `top` e corpos de `class`.
-- **Onde é inválido**: dentro de `func` (sem classes locais no GDScript);
-  sem corpo (exceto `@abstract` sem corpo, que emite declaração sem `:`).
+- **Where allowed**: `top` and `class` bodies.
+- **Where invalid**: inside `func` (no local classes in GDScript);
+  without a body (except bodiless `@abstract`, which emits a `:`-less
+  declaration).
 
-### `static-func` — como `func`, com `static`
+### `static-func` — like `func`, with `static`
 
-Exemplo:
+Example:
 
 ```lisp
 (static-func f () (pass))
@@ -222,14 +226,14 @@ static func f():
 	pass
 ```
 
-- **Onde pode**: `top` e corpos de `class`.
-- **Onde é inválido**: dentro de `func`; com `@abstract`.
+- **Where allowed**: `top` and `class` bodies.
+- **Where invalid**: inside `func`; with `@abstract`.
 
-### `signal` — `(signal nome)` / `(signal nome (args...))`
+### `signal` — `(signal name)` / `(signal name (args...))`
 
-Declara `signal`, com a mesma gramática de argumentos de `func`
-(mas sem tipo de retorno).
-Exemplos:
+Declares a `signal`, with the same argument grammar as `func`
+(but no return type).
+Examples:
 
 ```lisp
 (signal hit)
@@ -241,14 +245,15 @@ signal hit
 signal moved(from, to)
 ```
 
-- **Onde pode**: `top` e corpos de `class`.
-- **Onde é inválido**: dentro de `func`; com retorno declarado; com `@`.
+- **Where allowed**: `top` and `class` bodies.
+- **Where invalid**: inside `func`; with a declared return type; with
+  `@`.
 
-### `class` — `(class Nome membros...)`
+### `class` — `(class Name members...)`
 
-Declara classe interna `class Nome:` + membros (contexto `member`;
-vale tudo de topo exceto `class-name`; aninha livremente).
-Exemplo:
+Declares an inner class `class Name:` + members (`member` context;
+everything top-level except `class-name`; nests freely).
+Example:
 
 ```lisp
 (class Inner (extends Node) (pass))
@@ -260,13 +265,13 @@ class Inner:
 	pass
 ```
 
-- **Onde pode**: `top` e corpos de `class`.
-- **Onde é inválido**: dentro de `func`; sem corpo.
+- **Where allowed**: `top` and `class` bodies.
+- **Where invalid**: inside `func`; without a body.
 
-### `enum` — `(enum ENTS...)` / `(enum (Nome) ENTS...)`
+### `enum` — `(enum ITEMS...)` / `(enum (Name) ITEMS...)`
 
-Declara `enum [Nome] {...}` (entradas: átomos, `(N)`, `(N V)`).
-Exemplos:
+Declares `enum [Name] {...}` (entries: atoms, `(N)`, `(N V)`).
+Examples:
 
 ```lisp
 (enum (E) A (B 1))
@@ -284,17 +289,17 @@ enum {
 }
 ```
 
-- **Onde pode**: `top` e corpos de `class`.
-- **Onde é inválido**: dentro de `func`.
+- **Where allowed**: `top` and `class` bodies.
+- **Where invalid**: inside `func`.
 
-## 2. Fluxo de controle
+## 2. Control flow
 
 ### `if` / `elif` / `else`
 
-`(if cond corpo...)` com `(elif ...)`/`(else ...)` trailing consumidos
-como cadeia plana no mesmo nível. Condição: átomo verbatim ou expressão
-de linha única.
-Exemplo:
+`(if cond body...)` with trailing `(elif ...)`/`(else ...)` consumed as
+a flat chain at the same level. Condition: verbatim atom or single-line
+expression.
+Example:
 
 ```lisp
 (if "x > 0" (return 1) (elif "x < 0" (return -1)) (else (return 0)))
@@ -309,7 +314,7 @@ else:
 	return 0
 ```
 
-Inválido (fora de cadeia):
+Invalid (outside a chain):
 
 ```lisp
 (elif "a" (pass))
@@ -317,14 +322,14 @@ Inválido (fora de cadeia):
 
 > `transpiler: elif is only valid as a trailing form of (if ...)`
 
-- **Onde pode**: qualquer nível.
-- **Onde é inválido**: `(elif ...)`/`(else ...)` fora de `(if ...)`; ramo
-  `if` vazio antes da cadeia; `else` não por último; sub-links dentro de
-  corpos de `elif`/`else` (aninhar com `(if ...)` interno).
+- **Where allowed**: any level.
+- **Where invalid**: `(elif ...)`/`(else ...)` outside `(if ...)`; empty
+  `if` branch before the chain; non-trailing `else`; sub-links inside
+  `elif`/`else` bodies (nest an inner `(if ...)` instead).
 
-### `while` — `(while cond corpo...)`
+### `while` — `(while cond body...)`
 
-Exemplo:
+Example:
 
 ```lisp
 (while "x > 0" (pass))
@@ -335,13 +340,14 @@ while x > 0:
 	pass
 ```
 
-- **Onde pode**: qualquer nível.
-- **Onde é inválido**: sem corpo; condição `(lambda ...)` ou multilinha.
+- **Where allowed**: any level.
+- **Where invalid**: without a body; `(lambda ...)` or multiline
+  condition.
 
-### `for` — `(for nome in iter corpo...)` / `(for nome Tipo in iter corpo...)`
+### `for` — `(for name in iter body...)` / `(for name Type in iter body...)`
 
-O marcador `in` espelha o GDScript; tipo opcional no 2o slot.
-Exemplos:
+The `in` marker mirrors GDScript; optional type in the 2nd slot.
+Examples:
 
 ```lisp
 (for x in items (pass))
@@ -355,13 +361,13 @@ for n: int in items:
 	pass
 ```
 
-- **Onde pode**: qualquer nível.
-- **Onde é inválido**: sem marcador `in`; `in` como nome; iterável
-  `(lambda ...)` ou multilinha.
+- **Where allowed**: any level.
+- **Where invalid**: without the `in` marker; `in` as the name;
+  `(lambda ...)` or multiline iterable.
 
 ### `break` / `continue`
 
-Exemplo:
+Example:
 
 ```lisp
 (while "true" (break))
@@ -372,13 +378,13 @@ while true:
 	break
 ```
 
-- **Onde pode**: qualquer nível.
-- **Onde é inválido**: com argumentos.
+- **Where allowed**: any level.
+- **Where invalid**: with arguments.
 
-### `return` — `(return)` / `(return valor)`
+### `return` — `(return)` / `(return value)`
 
-Valor: átomo verbatim, `(lambda ...)` ou expressão.
-Exemplo:
+Value: verbatim atom, `(lambda ...)` or expression.
+Example:
 
 ```lisp
 (func f () (return 0))
@@ -389,15 +395,15 @@ func f():
 	return 0
 ```
 
-- **Onde pode**: qualquer nível.
-- **Onde é inválido**: com 2+ valores.
+- **Where allowed**: any level.
+- **Where invalid**: with 2+ values.
 
-### `match` / `branch` — `(match subj ramos...)`
+### `match` / `branch` — `(match subject branches...)`
 
-Todo filho direto precisa ser `(branch padrao corpo...)`. Padrões são
-átomos verbatim (empacotar múltiplos, arrays, dicts; `"_"` curinga;
-binding exige `var` explícito no padrão).
-Exemplo:
+Every direct child must be a `(branch pattern body...)` form. Patterns
+are verbatim atoms (pack multiples, arrays, dicts; `"_"` wildcard;
+binding requires an explicit `var` in the pattern).
+Example:
 
 ```lisp
 (match "x" (branch "1" (pass)) (branch "_" (pass)))
@@ -411,7 +417,7 @@ match x:
 		pass
 ```
 
-Inválido (fora de `match`):
+Invalid (outside `match`):
 
 ```lisp
 (branch "1" (pass))
@@ -419,18 +425,19 @@ Inválido (fora de `match`):
 
 > `transpiler: branch is only valid as a direct child of (match ...)`
 
-- **Onde pode**: qualquer nível.
-- **Onde é inválido**: filho direto que não seja `branch`; padrão vazio;
-  sub-ramos no corpo (aninhar com `(match ...)` interno).
+- **Where allowed**: any level.
+- **Where invalid**: direct children that are not `branch`; empty
+  pattern; sub-branches in the body (nest an inner `(match ...)`
+  instead).
 
-## 3. Funções como valores e chamadas
+## 3. Functions as values and calls
 
-### `lambda` — `(lambda (assinatura...) corpo...)`
+### `lambda` — `(lambda (signature...) body...)`
 
-Valor `func(args...):` + corpo (mesma gramática de assinatura e
-trailing-comment de `func`; sem indentação no cabeçalho, o chamador
-posiciona). Vale em defaults de `var` e em `return`.
-Exemplo:
+A `func(args...):` value + body (same signature grammar and
+trailing-comment rule as `func`; header carries no indentation, the
+caller places the line). Valid in `var` defaults and `return`.
+Example:
 
 ```lisp
 (var cb = (lambda (x) (return x)))
@@ -441,7 +448,7 @@ var cb = func(x):
 	return x
 ```
 
-Inválido (solta como statement):
+Invalid (bare as a statement):
 
 ```lisp
 (lambda (x) (pass))
@@ -449,15 +456,15 @@ Inválido (solta como statement):
 
 > `transpiler: lambda is only valid as a value (var default, return value...) — e.g. (var cb = (lambda (x) (pass)))`
 
-- **Onde pode**: posições de valor (`var`, `return`, `assign`).
-- **Onde é inválido**: como statement; em args/operandos de linha única;
-  em `const`; em coleções.
+- **Where allowed**: value positions (`var`, `return`, `assign`).
+- **Where invalid**: as a statement; in single-line args/operands; in
+  `const`; in collections.
 
-### `call` — `(call nome args...)`
+### `call` — `(call name args...)`
 
-Chamada `nome(a1, a2)`, como statement e como valor (aninha sem
-parênteses extras; `call` nunca precisa deles).
-Exemplos:
+A `name(a1, a2)` call, as a statement and as a value (nests without
+extra parentheses; `call` never needs them).
+Examples:
 
 ```lisp
 (call f x)
@@ -469,7 +476,7 @@ f(x)
 f(g(x))
 ```
 
-Inválido:
+Invalid:
 
 ```lisp
 (call)
@@ -477,15 +484,15 @@ Inválido:
 
 > `transpiler: usage: (call name args...) — e.g. (call print x)`
 
-- **Onde pode**: statements, valores, operandos e args.
-- **Onde é inválido**: sem nome; nome que seja lista; lambda em args
-  (ligar a `var` antes).
+- **Where allowed**: statements, values, operands and args.
+- **Where invalid**: without a name; list names; lambdas in args (bind
+  to a `var` first).
 
-### `get` / `set` — acessores trailing de `var`/`static-var`
+### `get` / `set` — trailing accessors of `var`/`static-var`
 
-`(get corpo...)` / `(set (nome) corpo...)` viram blocos (declaração
-ganha `:`); forma inline de átomo único vira referência na mesma linha.
-Exemplos:
+`(get body...)` / `(set (name) body...)` become blocks (the declaration
+gains `:`); single-atom inline form becomes a same-line reference.
+Examples:
 
 ```lisp
 (var h int = 1 (get (return h)))
@@ -503,39 +510,40 @@ var h = 1:
 var e = 1: get = get_e
 ```
 
-- **Onde pode**: trailing de `var`/`static-var` em membros.
-- **Onde é inválido**: soltos como statement; `var` local com acessor;
-  duplicados; misto inline+bloco; `set` com ≠1 parâmetro (nu, sem tipo).
+- **Where allowed**: trailing `var`/`static-var` on members.
+- **Where invalid**: bare as statements; local `var` with accessors;
+  duplicates; mixed inline+block; `set` with anything but 1 bare
+  parameter (no type).
 
-## 4. Expressões infixas, `assign`, `await`, `assert`, `breakpoint`, `ternary`
+## 4. Infix expressions, `assign`, `await`, `assert`, `breakpoint`, `ternary`
 
-Valem como statement e como valor (operandos infixos aninhados ganham
-parênteses por construção: `(* (+ a b) c)` vira `(a + b) * c`).
+Valid as statements and as values (nested infix operands gain
+parentheses by construction: `(* (+ a b) c)` becomes `(a + b) * c`).
 
-| Operação | GDScript | Exemplo |
+| Operation | GDScript | Example |
 |---|---|---|
-| `+` (n-ária) | `a + b + c` | `(+ a b c)` |
-| `-` (binário) | `a - b` | `(- a b)` |
-| `-` (unário) | `-x` | `(- x)` |
+| `+` (n-ary) | `a + b + c` | `(+ a b c)` |
+| `-` (binary) | `a - b` | `(- a b)` |
+| `-` (unary) | `-x` | `(- x)` |
 | `*` `/` `%` `**` | `a * b`, `a / b`, `a % b`, `a ** b` | `(* a b)` |
-| `==` `!=` `<` `>` `<=` `>=` | comparações | `(== a b)` |
-| `and` `or` (n-ários) | `a and b`, `a or b` | `(and a (or b c))` → `a and (b or c)` |
-| `not` (unário) | `not x` | `(not x)` |
+| `==` `!=` `<` `>` `<=` `>=` | comparisons | `(== a b)` |
+| `and` `or` (n-ary) | `a and b`, `a or b` | `(and a (or b c))` → `a and (b or c)` |
+| `not` (unary) | `not x` | `(not x)` |
 | `is` `as` `in` | `x is Node`, `x as Node`, `x in arr` | `(is x Node)` |
-| `<<` `>>` `&` `\|` `^` | shifts e bits | `(<< a 2)` → `a << 2` |
-| `~` (unário, sem espaço) | `~a` | `(~ a)` |
+| `<<` `>>` `&` `^` | shifts and bits | `(<< a 2)` → `a << 2` |
+| `~` (unary, no space) | `~a` | `(~ a)` |
 
-- **Onde pode**: statements, valores e operandos.
-- **Onde é inválido**: aridade errada (`(+)`, `(+ a)`, `(not a b)`);
-  lambda/statement multilinha como operando.
-- O operador `|` (ou bit a bit) segue a mesma regra: `(| a b)` gera
-  `a | b`.
+- **Where allowed**: statements, values and operands.
+- **Where invalid**: wrong arity (`(+)`, `(+ a)`, `(not a b)`);
+  lambda/multiline statement as an operand.
+- The `|` operator (bitwise or) follows the same rule: `(| a b)`
+  produces `a | b`.
 
-### `assign` — `(assign alvo op valor)`
+### `assign` — `(assign target op value)`
 
-`alvo OP valor` com OP em
-`= += -= *= /= %= <<= >>= &= |= ^= **=` (só statement; alvo átomo).
-Exemplo:
+`target OP value` with OP in
+`= += -= *= /= %= <<= >>= &= |= ^= **=` (statement only, atom target).
+Example:
 
 ```lisp
 (assign x += 1)
@@ -545,13 +553,14 @@ Exemplo:
 x += 1
 ```
 
-- **Onde pode**: só como statement, qualquer nível.
-- **Onde é inválido**: como valor; alvo lista; operador desconhecido.
+- **Where allowed**: statement-only, any level.
+- **Where invalid**: as a value; list targets; unknown operators.
 
 ### `await` — `(await x)`
 
-Compõe e parentetiza como infixo solto; statement, valor e operando.
-Exemplos:
+Composes and parenthesizes like a bare infix; statement, value and
+operand.
+Examples:
 
 ```lisp
 (await sig)
@@ -563,12 +572,12 @@ await sig
 var x = await sig
 ```
 
-- **Onde pode**: statements, valores e operandos.
-- **Onde é inválido**: com ≠1 argumento.
+- **Where allowed**: statements, values and operands.
+- **Where invalid**: with anything but 1 argument.
 
 ### `assert` — `(assert cond)` / `(assert cond msg)`
 
-Só statement. Exemplo:
+Statement-only. Example:
 
 ```lisp
 (assert ok)
@@ -578,21 +587,21 @@ Só statement. Exemplo:
 assert(ok)
 ```
 
-- **Onde pode**: só como statement.
-- **Onde é inválido**: como valor; com 0 ou 3+ args.
+- **Where allowed**: statement-only.
+- **Where invalid**: as a value; with 0 or 3+ args.
 
 ### `breakpoint` — `(breakpoint)`
 
-Sai `breakpoint` sem parênteses, só statement.
+Emits a bare `breakpoint` without parentheses, statement-only.
 
-- **Onde pode**: só como statement.
-- **Onde é inválido**: com argumentos; como valor.
+- **Where allowed**: statement-only.
+- **Where invalid**: with arguments; as a value.
 
 ### `ternary` — `(ternary cond a b)`
 
-Emite `a if cond else b`; statement, valor e operando (condição
-estruturada ganha parênteses).
-Exemplo:
+Emits `a if cond else b`; statement, value and operand (structured
+conditions gain parentheses).
+Example:
 
 ```lisp
 (ternary c a b)
@@ -602,18 +611,19 @@ Exemplo:
 a if c else b
 ```
 
-- **Onde pode**: statements, valores e operandos.
-- **Onde é inválido**: com ≠3 argumentos.
+- **Where allowed**: statements, values and operands.
+- **Where invalid**: with anything but 3 arguments.
 
-## 5. Coleções
+## 5. Collections
 
-Sempre multiline (vírgula final, indent +1), exceto vazias (`[]`/`{}`).
-Elementos/chaves/valores aceitam átomos e expressões aninhadas
-(inclusive coleção em coleção); lambdas dentro são rejeitadas.
+Always multiline (trailing comma, +1 indent), except empty ones
+(`[]`/`{}`). Elements, keys and values accept atoms and nested
+expressions (including collection-in-collection); lambdas inside are
+rejected.
 
 ### `array` — `(array elems...)`
 
-Exemplos:
+Examples:
 
 ```lisp
 (array)
@@ -628,9 +638,9 @@ Exemplos:
 ]
 ```
 
-### `dict-lua` — `(dict-lua (chave valor)...)`
+### `dict-lua` — `(dict-lua (key value)...)`
 
-Chaves saem nuas (estilo Lua). Exemplo:
+Keys come out bare (Lua style). Example:
 
 ```lisp
 (dict-lua (a 1) (b 2))
@@ -643,10 +653,10 @@ Chaves saem nuas (estilo Lua). Exemplo:
 }
 ```
 
-### `dict-json` — `(dict-json (chave valor)...)`
+### `dict-json` — `(dict-json (key value)...)`
 
-Chaves com `:` (estilo JSON; o que precisar de aspas usa este).
-Exemplo:
+Keys with `:` (JSON style; anything needing quotes uses this one).
+Example:
 
 ```lisp
 (dict-json ("\"k\"" 1))
@@ -658,14 +668,14 @@ Exemplo:
 }
 ```
 
-- **Onde pode**: statements, valores, args de `call` e elementos.
-- **Onde é inválido**: pares com aridade errada; lambda dentro.
+- **Where allowed**: statements, values, `call` args and elements.
+- **Where invalid**: pairs with wrong arity; lambdas inside.
 
-## 6. Anotações `@`
+## 6. `@` annotations
 
-Átomos `@` líderes após o operador, um por linha verbatim no mesmo
-indent (parametrizadas empacotam-se: `"@export_range(0, 100)"`).
-Exemplo:
+Leading `@` atoms after the operator, one verbatim line per annotation
+at the same indent (parameterized ones pack: `"@export_range(0, 100)"`).
+Example:
 
 ```lisp
 (var @export hp int = 100)
@@ -676,20 +686,19 @@ Exemplo:
 var hp: int = 100
 ```
 
-- **Onde pode**: `class-name`, `extends`, `var`, `static-var`, `func`,
-  `static-func`, `class`.
-- **Onde é inválido**: em `signal`/`const`; `@` sozinho; nomes com `@`;
-  em `comment` o `@` é só texto.
+- **Where allowed**: `class-name`, `extends`, `var`, `static-var`,
+  `func`, `static-func`, `class`.
+- **Where invalid**: on `signal`/`const`; lone `@`; `@` names; inside
+  `comment` the `@` is plain text.
 
-## 7. Meta-template e macros (somem antes do GDScript)
+## 7. Meta-template and macros (vanish before GDScript)
 
-### `include` — `(include caminho)`
+### `include` — `(include path)`
 
-Substituído pelas formas de topo do arquivo (splice colado, nunca
-aninhado). Caminhos: relativo ao arquivo que inclui, `res://`,
-`user://`, `/` de sistema. Guardas: ciclo (pilha canônica) e
-profundidade máxima 32.
-Exemplo (via arquivo; texto puro + relativo falha por falta de base):
+Replaced by the file's top-level forms (glued splice, never nested).
+Paths: relative to the including file, `res://`, `user://`, system `/`.
+Guards: cycles (canonical stack) and max depth 32.
+Example (from a file; bare text + relative fails for lack of a base):
 
 ```lisp
 (include "res://addons/0GnumarusLispToGdscriptTranspiler/tests/includes/common/note.gdl")
@@ -699,16 +708,16 @@ Exemplo (via arquivo; texto puro + relativo falha por falta de base):
 # sibling note
 ```
 
-- **Onde pode**: qualquer posição (expande estruturalmente).
-- **Onde é inválido**: forma malformada; arquivo ausente; ciclo;
-  relativo sem arquivo-base.
+- **Where allowed**: any position (expands structurally).
+- **Where invalid**: malformed forms; missing files; cycles; relative
+  paths without a base file.
 
-### `block` — `(block NOME corpo...)`
+### `block` — `(block NAME body...)`
 
-No pai, declara default (pai sozinho continua válido: o bloco vira o
-corpo colado). No filho (só `template-extends` + `block`s no topo),
-sobrescreve por nome. Nomes planos.
-Exemplo (pai `parent.gdl`):
+In the parent, declares a default (a lone parent stays valid: the
+block becomes the glued body). In the child (only `template-extends` +
+`block`s at the top), overrides by name. Flat names.
+Example (parent `parent.gdl`):
 
 ```lisp
 (extends Node)
@@ -719,15 +728,16 @@ Exemplo (pai `parent.gdl`):
     (pass)))
 ```
 
-- **Onde pode**: qualquer posição no pai; só topo no filho.
-- **Onde é inválido**: bloco desconhecido/duplicado no filho; formas
-  extras no topo do filho.
+- **Where allowed**: any position in the parent; top-level only in the
+  child.
+- **Where invalid**: unknown/duplicated blocks in the child; extra
+  top-level forms in the child.
 
-### `template-extends` — `(template-extends CAMINHO)`
+### `template-extends` — `(template-extends PATH)`
 
-Primeira forma do topo do filho: herda do pai e mescla overrides
-(includes por lado, cadeias recursivas, limite 32).
-Exemplo (filho `child.gdl` + saída):
+First top-level form of the child: inherits from the parent and merges
+overrides (per-side includes, recursive chains, limit 32).
+Example (child `child.gdl` + output):
 
 ```lisp
 (template-extends "parent.gdl")
@@ -744,15 +754,15 @@ func _ready():
 	print("hi")
 ```
 
-- **Onde pode**: só primeira forma do topo do filho.
-- **Onde é inválido**: fora da primeira posição (vira dangling no
-  transpiler); pai ausente; ciclo.
+- **Where allowed**: first top-level form of the child only.
+- **Where invalid**: anywhere else (dangling at the transpiler);
+  missing parent; cycles.
 
 ### `super` — `(super)`
 
-Sem argumentos, em corpo de override cola o default do bloco (por
-ocorrência; encadeia entre níveis).
-Exemplo (`super_child.gdl` → `.gd`):
+Argument-less, in an override body pastes the block default (per
+occurrence; chains across levels).
+Example (`super_child.gdl` → `.gd`):
 
 ```lisp
 (template-extends "parent.gdl")
@@ -769,16 +779,17 @@ func _ready():
 	print("hi")
 ```
 
-- **Onde pode**: só em corpo de override de filho.
-- **Onde é inválido**: com argumentos; sem bloco pai (dangling).
+- **Where allowed**: override bodies of a child only.
+- **Where invalid**: with arguments; without a parent block (dangling).
 
-### `defmacro` — `(defmacro NOME (params...) CORPO-FORMA-UNICA)`
+### `defmacro` — `(defmacro NAME (params...) SINGLE-FORM-BODY)`
 
-Define macro no topo (some, não gera código). Chamadas viram o corpo
-com args crus substituídos (sem higiene). No máximo um `...rest` por
-último, respingado. Expansão em ponto-fixo (macros usam macros) com
-orçamento de 1024 expansões e profundidade 64 (recursão = erro).
-Exemplo:
+Defines a top-level macro (vanishes, produces no code). Calls become
+the body with raw args substituted (unhygienic). At most one trailing
+`...rest`, splashed where the atom appears. Fixed-point expansion
+(macros use macros) with a 1024-expansion budget and depth 64
+(recursion = error).
+Example:
 
 ```lisp
 (defmacro twice (x) (array x x))
@@ -792,7 +803,7 @@ var a = [
 ]
 ```
 
-Fixture com `...rest` (`tests/macros/macros.gdl`):
+Fixture with `...rest` (`tests/macros/macros.gdl`):
 
 ```lisp
 (defmacro safe-call (obj mname ...args)
@@ -803,16 +814,16 @@ Fixture com `...rest` (`tests/macros/macros.gdl`):
   (if (not cond) body))
 ```
 
-- **Onde pode**: só no topo (definição); chamadas em qualquer posição
-  de statement/valor conforme o corpo.
-- **Onde é inválido**: fora do topo; nome duplicado/reservado; aridade
-  errada na chamada; recursão direta/mútua; corpo multiforma.
+- **Where allowed**: top-level only (definitions); calls in any
+  statement/value position the body fits.
+- **Where invalid**: outside the top level; duplicated/reserved names;
+  wrong call arity; direct/mutual recursion; multi-form bodies.
 
 ### `join` / `upper` / `lower` / `capitalize`
 
-Helpers só em corpos de macro: `(join a b...)` concatena átomos;
-os demais convertem caixa (estilo Jinja).
-Exemplo:
+Macro-body helpers only: `(join a b...)` concatenates atoms; the rest
+convert case (Jinja style).
+Example:
 
 ```lisp
 (defmacro greet (x) (join "pre-" x))
@@ -823,7 +834,7 @@ Exemplo:
 var a = pre-hi
 ```
 
-Inválido (fora de corpo):
+Invalid (outside a body):
 
 ```lisp
 (join a b)
@@ -831,15 +842,15 @@ Inválido (fora de corpo):
 
 > `transpiler: join is only valid inside macro bodies`
 
-- **Onde pode**: só em corpos de macro.
-- **Onde é inválido**: fora deles (dangling no transpiler).
+- **Where allowed**: macro bodies only.
+- **Where invalid**: outside them (dangling at the transpiler).
 
-### `for-generate` — `(for-generate (VAR FONTE) CORPO...)`
+### `for-generate` — `(for-generate (VAR SOURCE) BODY...)`
 
-Repete o corpo por valor: `(range A B [STEP])` (fim exclusivo) ou
-lista literal. Cada iteração cola cópias com VAR ligado (macros e
-`for-generate` aninhados compõem). Iterações dividem o orçamento.
-Exemplo:
+Repeats the body per value: `(range A B [STEP])` (exclusive end) or a
+literal value list. Each iteration pastes copies with VAR bound (nested
+macros and `for-generate` compose). Iterations share the budget.
+Example:
 
 ```lisp
 (for-generate (i (range 0 3)) (var (join "slot_" i) = i))
@@ -851,17 +862,18 @@ var slot_1 = 1
 var slot_2 = 2
 ```
 
-- **Onde pode**: posições de statement/elemento (splice).
-- **Onde é inválido**: em slots de valor único (ex.
-  `(var t = (for-generate ...))` falha); fonte malformada; STEP zero.
+- **Where allowed**: statement/element positions (splice).
+- **Where invalid**: in single-value slots (e.g.
+  `(var t = (for-generate ...))` fails); malformed sources; zero STEP.
 
 ### `template-set` / `tvar` / `when` / `when-not`
 
-Ambiente plano único, avaliação sequencial: `(template-set NOME VALOR)`
-expande e liga (some; redefine); `(tvar NOME)` cola o nó guardado;
-`(when NOME CORPO...)` cola se ligado e verdadeiro (só `""` e `"false"`
-são falsos), `(when-not ...)` inverte. Nome indefinido é erro.
-Exemplos:
+Single flat environment, sequential evaluation:
+`(template-set NAME VALUE)` expands and binds (vanishes; redefinable);
+`(tvar NAME)` pastes the stored node; `(when NAME BODY...)` pastes when
+bound and truthy (only `""` and `"false"` are falsy),
+`(when-not ...)` inverts. Undefined names are errors.
+Examples:
 
 ```lisp
 (template-set debug true)
@@ -881,7 +893,7 @@ var d = 1
 var g = "hi"
 ```
 
-Inválido:
+Invalid:
 
 ```lisp
 (when nope (pass))
@@ -889,6 +901,6 @@ Inválido:
 
 > `macro: undefined template variable "nope"`
 
-- **Onde pode**: `template-set`/`when`/`when-not` em statements;
-  `tvar` em valores.
-- **Onde é inválido**: nome indefinido; aridades erradas.
+- **Where allowed**: `template-set`/`when`/`when-not` in statements;
+  `tvar` in values.
+- **Where invalid**: undefined names; wrong arities.
