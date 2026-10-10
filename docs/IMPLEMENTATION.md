@@ -238,8 +238,9 @@ Geracao (`for-generate (VAR FONTE) CORPO...`, no expansor): FONTE e
 reverter) ou lista literal de valores; cada iteracao cola copias do corpo
 com VAR ligado (atomo ou subarvore), que expandem depois (macros e
 `for-generate` aninhados compoem; helpers colapsam por instancia).
-Posicoes de statement/elemento apenas (slots de valor unico rejeitam o
-splice). Iteracoes dividem o orcamento de expansoes.
+Posicoes de statement/elemento apenas (slots de valor unico — defaults,
+returns, args, operandos, condicoes — falham no expansor nomeando as duas
+formas). Iteracoes dividem o orcamento de expansoes.
 
 Variaveis de template (no expansor, ambiente plano unico): `(template-set
 NOME VALOR)` expande o valor na hora e liga (some; redefine); `(tvar NOME)`

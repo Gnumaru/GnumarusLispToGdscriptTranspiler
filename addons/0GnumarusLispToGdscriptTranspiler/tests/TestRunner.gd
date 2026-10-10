@@ -1008,6 +1008,24 @@ func _test_generate() -> void:
 	_check_transpiles("macro generates",
 		"(defmacro gen (n) (for-generate (i (range 0 n)) (var (join \"v\" i) = i))) (gen 2)",
 		"var v0 = 0\nvar v1 = 1\n")
+	_check_transpiles("generate in array",
+		"(var a = (array (for-generate (i (range 0 2)) i)))",
+		"var a = [\n\t0,\n\t1,\n]\n")
+	# Single-value slots fail fast naming both forms (no confusing leak).
+	var slot_cases: Array = [
+		"(var t = (for-generate (i (range 0 2)) (pass)))",
+		"(func f () (return (for-generate (i (range 0 2)) (pass))))",
+		"(call f (for-generate (i (range 0 2)) (pass)))",
+		"(+ (for-generate (i (range 0 2)) (pass)) 1)",
+		"(template-set x (for-generate (i (range 0 2)) (pass)))",
+		"(template-set d true) (var t = (when d (pass)))",
+	]
+	for c in slot_cases:
+		# Facade result, expected to fail naming the slot.
+		var r: Dictionary = FacadeScript.transpile_text(c)
+		_check("generate slot: fails " + c.left(40), r["ok"] == false, str(r))
+		if not r["ok"]:
+			_check("generate slot: names positions " + c.left(40), str(r.get("error", "")).contains("only valid in statement positions"), str(r.get("error", "")))
 	# Bare forms rejected by the facade (ok must be false).
 	var cases: Array = [
 		"(for-generate)",

@@ -863,8 +863,16 @@ var slot_2 = 2
 ```
 
 - **Where allowed**: statement/element positions (splice).
-- **Where invalid**: in single-value slots (e.g.
-  `(var t = (for-generate ...))` fails); malformed sources; zero STEP.
+- **Where invalid**: in single-value slots, which fail fast naming both
+  forms:
+
+```lisp
+(var t = (for-generate (i (range 0 2)) (pass)))
+```
+
+> `macro: (for-generate ...) cannot be used as a single value (here: inside (var ...)) — it expands to zero or multiple forms, so it is only valid in statement positions`
+
+Malformed sources and zero STEP also fail.
 
 ### `template-set` / `tvar` / `when` / `when-not`
 

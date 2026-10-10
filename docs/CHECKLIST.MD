@@ -17,6 +17,11 @@ Legenda: `[x]` feito, `[ ]` pendente/futuro.
 - [x] 11. Validacao — importar o projeto headless, rodar o TestRunner e checar `--check-only` nos `.gd` gerados/esperados.
 - [x] 12. Documentacao — comentarios `##`/`#` em toda classe, funcao e variavel.
 
+## Revisao v3.12 — erro claro em slots de valor unico
+
+- [x] 138. Guarda no expansor (`_is_value_slot` + dono): `for-generate`/`when`/`template-set` em defaults, returns, args, operandos e condicoes falham nomeando as duas formas (antes vazava erro confuso do transpiler, ex. "misplaced '='" no `var`).
+- [x] 139. Checks de mensagem em 6 slots + positivo em elementos de array; OPERATIONS cita a nova mensagem; TestRunner 765/765 + `--check-only`.
+
 ## Revisao v3.11 — OPERATIONS.md (referencia das 72 operacoes)
 
 - [x] 136. `OPERATIONS.md` no addon (nome, descricao, contextos validos/invalidos, exemplos executados no transpilador + fixtures byte a byte); cobertura 72/72 verificada por script.

@@ -18,7 +18,8 @@
 ## value list; each iteration splices BODY copies with VAR bound to the value,
 ## so generation composes with macros (bodies may call macros, macro bodies
 ## may generate). Statement/element positions only: single-value slots
-## (var defaults, operands...) reject multi-form splices downstream.
+## (var defaults, operands...) fail fast here with a clear error naming
+## both forms instead of leaking confusing errors downstream.
 ## Macros may use other macros; expansion recurses
 ## depth-first until no macro heads remain. A budget bounds total expansions
 ## and generated iterations (self- and mutually-recursive macros fail instead
@@ -28,7 +29,7 @@ class_name GnumarusLispToGdscriptTranspilerMacroExpander
 extends RefCounted
 
 
-## Transpiler script, loaded by path (reserved-name check only).
+## Transpiler script, loaded by path (reserved names and the live infix list).
 const TranspilerScript = preload("res://addons/0GnumarusLispToGdscriptTranspiler/GnumarusLispToGdscriptTranspilerTranspiler.gd")
 ## Maximum total node expansions before giving up (recursion guard).
 const MAX_MACRO_EXPANSIONS: int = 1024
@@ -133,11 +134,17 @@ static func _define_macro(p_form: Array, p_macros: Dictionary) -> Dictionary:
 ## helpers and recurse; anything else recurses into children untouched.
 ## p_counter[0] counts expansions against p_max; p_depth counts nested
 ## expansions against p_max_depth (tree walking never consumes depth).
-static func _expand_node(p_node, p_macros: Dictionary, p_env: Dictionary, p_counter: Array, p_depth: int, p_max: int, p_max_depth: int) -> Dictionary:
+## p_owner names the enclosing single-value slot ("" in statement position):
+## splice markers (for-generate/when/template-set) landing there fail fast
+## with a clear error instead of confusing the transpiler downstream.
+static func _expand_node(p_node, p_macros: Dictionary, p_env: Dictionary, p_counter: Array, p_depth: int, p_max: int, p_max_depth: int, p_owner: String = "") -> Dictionary:
 	if not (p_node is Array) or (p_node as Array).is_empty():
 		return {"ok": true, "node": p_node, "error": ""}
 	# Head of the candidate call form.
 	var head = (p_node as Array)[0]
+	# Splice producers never belong in single-value slots: name both forms.
+	if not p_owner.is_empty() and (head is String) and (head == "for-generate" or head == "when" or head == "when-not" or head == "template-set"):
+		return {"ok": false, "node": null, "error": "(%s ...) cannot be used as a single value (here: inside (%s ...)) — it expands to zero or multiple forms, so it is only valid in statement positions" % [head, p_owner]}
 	if (head is String) and head == "for-generate":
 		return _expand_generate(p_node, p_macros, p_env, p_counter, p_depth, p_max, p_max_depth)
 	if (head is String) and head == "template-set":
@@ -172,7 +179,8 @@ static func _expand_node(p_node, p_macros: Dictionary, p_env: Dictionary, p_coun
 		if p_depth + 1 > p_max_depth:
 			return {"ok": false, "node": null, "error": "macro expansion nesting beyond maximum depth (%d) — possible recursive macro" % p_max_depth}
 		# Inner calls expanded before helper collapsing (calls may yield atoms).
-		var inner: Dictionary = _expand_node(subst["list"], p_macros, p_env, p_counter, p_depth + 1, p_max, p_max_depth)
+		# The call-site slot carries over: a splice body in a value slot fails here.
+		var inner: Dictionary = _expand_node(subst["list"], p_macros, p_env, p_counter, p_depth + 1, p_max, p_max_depth, p_owner)
 		if not inner["ok"]:
 			return inner
 		# Helpers collapsed after everything inside expanded.
@@ -182,18 +190,80 @@ static func _expand_node(p_node, p_macros: Dictionary, p_env: Dictionary, p_coun
 		return {"ok": true, "node": collapsed["node"], "error": ""}
 	# Ordinary form: recurse into children (same nesting depth).
 	var out: Array = []
-	for element in (p_node as Array):
+	# Owner head for single-value errors ("" when headless or in statements).
+	var owner: String = head if (head is String) else ""
+	for i in range((p_node as Array).size()):
+		# Whether child i is a single-value slot of this form.
+		var slot: String = owner if _is_value_slot(p_node, i) else ""
 		# One child expanded depth-first.
-		var child: Dictionary = _expand_node(element, p_macros, p_env, p_counter, p_depth, p_max, p_max_depth)
+		var child: Dictionary = _expand_node((p_node as Array)[i], p_macros, p_env, p_counter, p_depth, p_max, p_max_depth, slot)
 		if not child["ok"]:
 			return child
 		_append_expanded(out, child)
 	return {"ok": true, "node": out, "error": ""}
 
 
+## Tells whether child p_idx of p_form is a single-value slot (exactly one
+## value in: var defaults, return values, call args, operands...) as opposed
+## to statement lists or collection elements (multi-form splices glue in
+## place there). Unknown heads (macro calls, future operations) never flag:
+## their arguments paste opaquely and validate at the use site.
+static func _is_value_slot(p_form: Array, p_idx: int) -> bool:
+	# Head positions never hold values (atoms by grammar).
+	if p_idx == 0:
+		return false
+	# Head of the form (non-string heads hold no value slots).
+	var head = (p_form as Array)[0]
+	if not (head is String):
+		return false
+	# Argument index of the child (head itself excluded).
+	var arg: int = p_idx - 1
+	match head:
+		"var", "static-var":
+			# Default by shape prefix: (n = X) third slot, (n T = X)
+			# fourth (trailing get/set accessors never count as values).
+			if (p_form as Array).size() >= 4 and ((p_form as Array)[2] is String) and ((p_form as Array)[2] == "=" or (p_form as Array)[2] == ":="):
+				return arg == 2
+			if (p_form as Array).size() >= 5 and ((p_form as Array)[3] is String) and (p_form as Array)[3] == "=":
+				return arg == 3
+			return false
+		"const":
+			# Same shape prefixes as var (constants take no accessors).
+			if (p_form as Array).size() >= 4 and ((p_form as Array)[2] is String) and ((p_form as Array)[2] == "=" or (p_form as Array)[2] == ":="):
+				return arg == 2
+			if (p_form as Array).size() >= 5 and ((p_form as Array)[3] is String) and (p_form as Array)[3] == "=":
+				return arg == 3
+			return false
+		"return":
+			return (p_form as Array).size() >= 2 and arg == 0
+		"assign":
+			return (p_form as Array).size() >= 3 and arg == 2
+		"call", "assert":
+			# Every argument is one value (name included: it must be one atom).
+			return arg >= 0
+		"ternary":
+			return arg >= 0 and arg <= 2
+		"await":
+			return (p_form as Array).size() == 2 and arg == 0
+		"if", "elif", "while", "match":
+			# Conditions and the match subject are single expressions.
+			return (p_form as Array).size() >= 2 and arg == 0
+		"for":
+			# Iterable by shape: (n in I ...) third slot, (n T in I ...) fifth.
+			if (p_form as Array).size() >= 5 and ((p_form as Array)[2] is String) and (p_form as Array)[2] == "in":
+				return arg == 2
+			if (p_form as Array).size() >= 6 and ((p_form as Array)[3] is String) and (p_form as Array)[3] == "in":
+				return arg == 4
+			return false
+	if (head as String) in TranspilerScript.INFIX_OPS:
+		# Every operand is one value (unary and n-ary alike).
+		return arg >= 0
+	return false
+
+
 ## Appends an expanded child to a form list, splicing multi-form
-## (for-generate ...) results in place. Splice markers never escape lists:
-## single-value slots (var defaults, operands...) reject them downstream.
+## (for-generate ...) results in place. Markers only reach spliceable
+## lists: single-value slots fail fast in _expand_node before markers arise.
 static func _append_expanded(p_out: Array, p_expanded: Dictionary) -> void:
 	# Expanded node (single node or splice marker).
 	var node = p_expanded["node"]
@@ -215,8 +285,9 @@ static func _expand_set(p_node: Array, p_macros: Dictionary, p_env: Dictionary, 
 	var vname = (p_node as Array)[1]
 	if not (vname is String) or (vname as String).is_empty():
 		return {"ok": false, "node": null, "error": "template variable name must be a non-empty string"}
-	# Value expanded now (fail fast, current environment).
-	var expanded: Dictionary = _expand_node((p_node as Array)[2], p_macros, p_env, p_counter, p_depth, p_max, p_max_depth)
+	# Value expanded now (fail fast, current environment; a splice body
+	# in this single slot fails here naming template-set).
+	var expanded: Dictionary = _expand_node((p_node as Array)[2], p_macros, p_env, p_counter, p_depth, p_max, p_max_depth, "template-set")
 	if not expanded["ok"]:
 		return expanded
 	p_env[vname] = expanded["node"]
