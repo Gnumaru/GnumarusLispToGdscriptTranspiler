@@ -17,6 +17,11 @@ Legenda: `[x]` feito, `[ ]` pendente/futuro.
 - [x] 11. Validacao — importar o projeto headless, rodar o TestRunner e checar `--check-only` nos `.gd` gerados/esperados.
 - [x] 12. Documentacao — comentarios `##`/`#` em toda classe, funcao e variavel.
 
+## Revisao v3.5 — watcher ignora fixtures do addon
+
+- [x] 122. `ADDON_TESTS_ROOT` + poda em `_collect_gdl_in`: salvar `.gdl` com o plugin ativo nao reescreve (nem carimba) os `.gd` esperados dos testes.
+- [x] 123. Regressao em `_test_watcher` (`collect_gdl` vazio + `transpile_sidecars` forcado sem tocar nada); TestRunner 721/721 + `--check-only`.
+
 ## Revisao v3.4 — highlighter com as cores do GDScript
 
 - [x] 117. `GnumarusGdlTheme` (listas e cores padrao do GDScript 4.7.2: keyword/controle separados, base, get/set, globais, anotacoes).

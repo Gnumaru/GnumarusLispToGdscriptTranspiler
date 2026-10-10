@@ -355,7 +355,10 @@ deletada deixa o orfao. Edicao em include/pai nao retriggera dependentes
 (item manual força tudo). Ao ativar, adiciona `gdl` em
 `docks/filesystem/textfile_extensions` (persiste no exit): `.gdl` abre
 como texto puro — sem parsing GDScript. Nao ligado no `project.godot`
-deste repo (fixtures de erro dariam spam a cada scan).
+deste repo (fixtures de erro dariam spam a cada scan). O coletor nunca
+desce em `addons/GnumarusLispToGdscriptTranspiler/tests` (nem forcado):
+os `.gd` ali sao saidas esperadas dos testes, nao artefatos de build —
+salvar um `.gdl` com o plugin ativo nao os carimba mais.
 
 Highlighter (v3.4): `GnumarusGdlTheme` (`RefCounted` puro, so dados)
 congela as listas e cores padrao do GDScript 4.7.2 (keywords separadas em

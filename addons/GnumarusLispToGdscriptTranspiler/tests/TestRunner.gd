@@ -1124,6 +1124,13 @@ func _test_watcher() -> void:
 	# Missing root reports nothing to do (no crash).
 	var r7: Dictionary = watcher.transpile_sidecars("res://tmp/no_such_dir")
 	_check("watcher: missing root", (r7["updated"] as Array).is_empty() and (r7["failed"] as Array).is_empty(), str(r7))
+	# The addon self-test fixtures are never watcher inputs, not even
+	# forced: saving a `.gdl` while hacking the addon cannot stamp the
+	# expected `.gd` outputs the byte comparisons rely on.
+	_check("watcher: skips addon tests", PluginImplScript.collect_gdl(TESTS_DIR).is_empty(), str(PluginImplScript.collect_gdl(TESTS_DIR)))
+	# Forced run over the fixtures root touches nothing (no stamps back).
+	var r8: Dictionary = watcher.transpile_sidecars(TESTS_DIR, true)
+	_check("watcher: forced skip", (r8["updated"] as Array).is_empty() and (r8["failed"] as Array).is_empty(), str(r8))
 
 
 ## Tests of Gnumarus source coloring: rainbow depths, indent levels,

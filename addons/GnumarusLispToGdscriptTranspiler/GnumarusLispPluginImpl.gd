@@ -21,6 +21,10 @@ const HighlighterScript = preload("res://addons/GnumarusLispToGdscriptTranspiler
 const TEXTFILE_EXTENSIONS_SETTING: String = "docks/filesystem/textfile_extensions"
 ## Project tool menu item name for manual transpilation.
 const TOOL_MENU_NAME: String = "Transpile Gnumarus files"
+## Project path holding the addon self-test fixtures (never watcher
+## inputs: its `.gd` files are expected test outputs, not build artifacts,
+## so saving a `.gdl` while hacking the addon cannot stamp them).
+const ADDON_TESTS_ROOT: String = "res://addons/GnumarusLispToGdscriptTranspiler/tests"
 ## First line stamped on generated files (source name appended).
 const GENERATED_STAMP: String = "# GENERATED FROM %s BY GNUMARUS - DO NOT EDIT"
 
@@ -154,7 +158,8 @@ func transpile_sidecars(p_root: String, p_force: bool = false) -> Dictionary:
 	return {"updated": updated, "failed": failed}
 
 
-## Collects every `.gdl` file under p_root (sorted, `.godot` skipped).
+## Collects every `.gdl` file under p_root (sorted, `.godot` and the addon
+## self-test fixtures skipped).
 static func collect_gdl(p_root: String) -> Array:
 	# Found sources in scan order.
 	var found: Array = []
@@ -163,8 +168,12 @@ static func collect_gdl(p_root: String) -> Array:
 	return found
 
 
-## Recursive scan worker appending `.gdl` paths (skips `.godot`).
+## Recursive scan worker appending `.gdl` paths (skips `.godot` and the
+## addon self-test fixtures, which are expectations, not build artifacts).
 static func _collect_gdl_in(p_dir: String, p_found: Array) -> void:
+	# Never descends into the addon tests tree (see ADDON_TESTS_ROOT).
+	if p_dir == ADDON_TESTS_ROOT or p_dir.begins_with(ADDON_TESTS_ROOT + "/"):
+		return
 	# Directory handle for listing entries.
 	var dir: DirAccess = DirAccess.open(p_dir)
 	if dir == null:
