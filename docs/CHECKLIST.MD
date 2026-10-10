@@ -17,6 +17,11 @@ Legenda: `[x]` feito, `[ ]` pendente/futuro.
 - [x] 11. Validacao — importar o projeto headless, rodar o TestRunner e checar `--check-only` nos `.gd` gerados/esperados.
 - [x] 12. Documentacao — comentarios `##`/`#` em toda classe, funcao e variavel.
 
+## Revisao v3.11 — OPERATIONS.md (referencia das 72 operacoes)
+
+- [x] 136. `OPERATIONS.md` no addon (nome, descricao, contextos validos/invalidos, exemplos executados no transpilador + fixtures byte a byte); cobertura 72/72 verificada por script.
+- [x] 137. Sonda temporaria removida; nenhum codigo alterado (suite segue 753/753).
+
 ## Revisao v3.10 — prefixo das classes (GnumarusLispToGdscriptTranspiler*)
 
 - [x] 134. 13 arquivos + `.uid` renomeados; 94 trocas de identificadores (`class_name`, preloads, `plugin.cfg`, refs em comentarios/docs); prosa, carimbo `GNUMARUS`, menu e nome do dropdown intactos.

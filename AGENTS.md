@@ -1,6 +1,6 @@
 
 - nunca faca operacoes de escrita do git como checkout, commit ou push. apenas operacoes de leitura como status ou log.
-- converse comigo apenas em portugues. faça as documentacoes de planejamento apenas em portugues. faça todo o resto (codigo, nomes de arquivos, diretorios, codigo, comentarios) apenas em ingles.
+- converse comigo apenas em portugues. faça as documentacoes de planejamento do diretorio docs apenas em portugues. faça todo o resto (codigo, nomes de arquivos, diretorios, codigo, comentarios, qualquer coisa fora do diretorio docs) apenas em ingles.
 - estamos em um ambiente grafico linux ubuntu 26.04 x86_64 com wayland e gnome, em um terminal bash. você não tem poderes de sudo então se precisar que eu faça qualquer coisa como sudo me avise que eu faço
 - se precisar de um executavel do godot temos um em /sync/opt/godot/godot4.x86_64
 - se precisar checar a implementacao da engine temos uma copia do repositorio em /N/syncnot/src/godot_upstream que esta na versao 4.7.2.stable
