@@ -10,6 +10,9 @@ var defaulted = 5
 var inferred := 42
 var full: float = 0.5
 var text: String = "packed double"
+var text2: String = 'packed double'
+var text3: String = "packed double"
+var text4: String = "packed double"
 var direction: Vector2 = Vector2(1, 2)
 var callback = func(msg):
 	return msg
