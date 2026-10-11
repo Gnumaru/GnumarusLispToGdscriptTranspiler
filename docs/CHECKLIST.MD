@@ -17,6 +17,12 @@ Legenda: `[x]` feito, `[ ]` pendente/futuro.
 - [x] 11. Validacao — importar o projeto headless, rodar o TestRunner e checar `--check-only` nos `.gd` gerados/esperados.
 - [x] 12. Documentacao — comentarios `##`/`#` em toda classe, funcao e variavel.
 
+## Revisao v3.23 — `unpack-arr-safe` (operacao 75)
+
+- [x] 159. `_emit_unpack_arr_safe` no transpiler (specs com a gramatica exata do `var` via `_emit_plain_variable`, sem head; `arr_size_N` com `_unpack_counter` zerado em `transpile()`; guards `if size > i` sem hints nas atribuicoes; so statement; array atomo).
+- [x] 160. Testes — fixture `Test7.gdl` → `Test7.gd` (6 specs, unpack duplo provando `_0`/`_1`), `_test_unpack_forms`/`_test_unpack_errors` (12 erros, inclui uso como valor), contagem 74 → 75; TestRunner 873/873 + `--check-only`.
+- [x] 161. Docs — OPERATIONS (indice 60 normais/75 total + secao apos `const`), IMPLEMENTATION (tabela + paragrafo) e esta entrada.
+
 ## Revisao v3.22 — nome da linguagem (GDLisp)
 
 - [x] 158. Renomeado o nome do formato de "Gnumarus"/"Gnumarus Lisp" para GDLisp em prosa de comentarios e docs (`... transpiler Lisp dialect` vira `... GDLisp dialect`, `Gnumarus-only` vira `GDLisp-only`); strings visiveis (menu `Transpile GDLisp files`, carimbo `BY GDLISP`, dropdown `GDLisp 3.8`, logs `GDLisp:`), chave de cor `gnumarus` → `gdlisp` e testes/fixtures acompanham. Identificadores, caminhos, `author` do `plugin.cfg` e historico de revisoes (nomes atualizados) intactos; TestRunner 847/847 + `--check-only`.

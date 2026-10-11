@@ -31,6 +31,11 @@ const COLLECTION_OPS: Array = ["array", "dict-lua", "dict-json"]
 ## Each emitter takes (form: Array, indent: int) -> Dictionary
 ## {"ok": bool, "code": String, "error": String}.
 var _operations: Dictionary = {}
+## Per-transpilation counter for (unpack-arr-safe ...) size snapshots.
+## Each expansion takes `<arr>_size_<n>` with the current value, so repeated
+## unpacks never collide and the output stays deterministic (reset in
+## transpile, which always runs on a fresh pipeline instance).
+var _unpack_counter: int = 0
 
 
 ## Constructor: registers the operations supported in v1.
@@ -92,6 +97,7 @@ func _init() -> void:
 		"breakpoint": Callable(self, "_emit_breakpoint"),
 		"enum": Callable(self, "_emit_enum"),
 		"ternary": Callable(self, "_emit_ternary"),
+		"unpack-arr-safe": Callable(self, "_emit_unpack_arr_safe"),
 		"array": Callable(self, "_emit_array"),
 		"dict-lua": Callable(self, "_emit_dict_lua"),
 		"dict-json": Callable(self, "_emit_dict_json"),
@@ -127,6 +133,8 @@ func has_operation(p_name: String) -> bool:
 ## Returns {"ok": true, "code": String, "error": ""}; output ends with "\n"
 ## when non-empty. On failure returns {"ok": false, "code": "", ...}.
 func transpile(p_tree: Array) -> Dictionary:
+	# Fresh per-run snapshot counter (deterministic numbering).
+	_unpack_counter = 0
 	# Code blocks, one per top-level form (func yields a multiline block).
 	var blocks: Array = []
 	for form in p_tree:
@@ -360,6 +368,58 @@ func _emit_plain_variable(p_decl: Array, p_indent: int, p_op: String, p_keyword:
 				return _fail("'%s %s: %s := ...' is invalid GDScript (type hint and inference cannot be combined)" % [p_keyword, vname, args[1]])
 			return _fail("expected '=' before default value: usage (%s %s %s = value)" % [p_op, vname, args[1]])
 	return _fail("invalid '%s' form; usages: (%s n), (%s n T), (%s n = v), (%s n := v), (%s n T = v)" % [p_op, p_op, p_op, p_op, p_op, p_op])
+
+
+## Emits safe array unpacking from (unpack-arr-safe ARR (SPEC...)): one
+## `var` declaration per spec (same 5 positional forms as (var ...), without
+## the `var` head: bare atom, (n), (n T), (n = v), (n := v), (n T = v)), one
+## `<arr>_size_<n>` snapshot (`n` from the per-transpilation counter, so
+## repeated unpacks never collide), then one bounds-checked
+## `if <size> > <i>:` guard per index (missing elements keep the declared
+## default; assignments never carry type hints). Statement-only: it expands
+## to multiple lines. Valid at any level, like (var ...) and (if ...).
+func _emit_unpack_arr_safe(p_form: Array, p_indent: int, _p_context: String) -> Dictionary:
+	if p_form.size() != 3:
+		return _fail("usage: (unpack-arr-safe array (specs...)) — e.g. (unpack-arr-safe myarr (a (b int)))")
+	# Array atom (names the size snapshot and the indexed reads).
+	var arr = p_form[1]
+	if not (arr is String) or (arr as String).is_empty():
+		return _fail("unpack-arr-safe array must be a non-empty atom — e.g. (unpack-arr-safe myarr (...))")
+	# Spec list: one var-shaped declaration per element.
+	var specs = p_form[2]
+	if not (specs is Array) or (specs as Array).is_empty():
+		return _fail("unpack-arr-safe needs a non-empty spec list — e.g. (unpack-arr-safe myarr (a (b int)))")
+	# Snapshot variable name, unique per transpilation (deterministic).
+	var sizevar: String = "%s_size_%d" % [arr, _unpack_counter]
+	_unpack_counter += 1
+	# Output lines: declarations, then the snapshot, then the guards.
+	var lines: Array = []
+	# Unpacked variable names, in spec order (position = array index).
+	var names: Array = []
+	for spec in specs:
+		# Declaration slots: bare atoms stay whole, sublists pass through.
+		var decl: Array = []
+		if spec is String:
+			if (spec as String).is_empty():
+				return _fail("unpack-arr-safe spec name must be a non-empty identifier")
+			decl = [spec]
+		elif spec is Array and not (spec as Array).is_empty():
+			decl = spec
+		else:
+			return _fail("unpack-arr-safe specs must be names or (name ...) lists (got '%s')" % str(spec))
+		# Declaration line in the exact (var ...) grammar (no accessors).
+		var dres: Dictionary = _emit_plain_variable(decl, p_indent, "unpack-arr-safe", "var")
+		if not dres["ok"]:
+			return dres
+		lines.append(dres["code"])
+		names.append(decl[0])
+	# Size snapshot after the declarations.
+	lines.append("%svar %s = %s.size()" % [_indent_text(p_indent), sizevar, arr])
+	# One bounds-checked assignment per spec, in index order.
+	for i in range(names.size()):
+		lines.append("%sif %s > %d:" % [_indent_text(p_indent), sizevar, i])
+		lines.append("%s%s = %s[%d]" % [_indent_text(p_indent + 1), names[i], arr, i])
+	return _ok("\n".join(lines))
 
 
 ## Emits `# text` from (comment text...). Valid at any level.

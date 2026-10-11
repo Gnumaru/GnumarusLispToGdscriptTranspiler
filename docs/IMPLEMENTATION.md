@@ -106,6 +106,7 @@ com mensagem em portugues.
 | `(breakpoint)` | `breakpoint` sem parenteses (so statement) |
 | `(enum ENTS...)` / `(enum (N) ENTS...)` | `enum [N] {...}` (topo e membros; entradas atomos, `(N)`, `(N V)`) |
 | `(ternary c a b)` | `a if c else b` (statement, valor e operando) |
+| `(unpack-arr-safe arr (specs...))` | declara um `var` por spec (mesmas 5 formas do `var`, sem o head) + `var arr_size_N = arr.size()` (N deterministico, por transpilacao) + um `if size > i: nome = arr[i]` por indice (so statement) |
 | `(include caminho)` | some: colado pelas formas de topo do arquivo (qualquer posicao) |
 | `(block nome corpo...)` | declara/some: vira o corpo colado (pai sozinho ou apos override) |
 | `(template-extends caminho)` | primeira forma do filho: herda e sobrescreve blocos do pai |
@@ -180,6 +181,11 @@ parenteses sempre (correto por construcao: `(* (+ a b) c)` vira
 `(a + b) * c`); `call` nunca precisa (ja parentetizado); lambdas nao
 aninham em args/operandos de linha unica (ligar a `var` antes);
 `assign` e so statement, alvo e atomo verbatim, valor na faixa total.
+`unpack-arr-safe` tambem e so statement (expande para multiplas linhas):
+specs com a gramatica exata do `var` (sem o head; sem `@` nem acessores),
+array precisa ser atomo (nomeia o snapshot e as leituras) e o contador
+`_unpack_counter` (zerado em `transpile()`) numera `arr_size_N` sem
+colisoes e sem aleatoriedade (fixtures byte a byte).
 
 Anotacoes: atomos `@` lideres apos o operador, um por linha verbatim no
 mesmo indent (com parametros empacota-se: `"@export_range(0, 100)"`);

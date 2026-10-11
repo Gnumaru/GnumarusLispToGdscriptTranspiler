@@ -1,6 +1,6 @@
 # OPERATIONS.md — GDLisp → GDScript transpiler operations
 
-Reference for all 74 implemented operations: name, description, where
+Reference for all 75 implemented operations: name, description, where
 each form may appear, where using it is invalid, and usage examples with
 the produced GDScript output. Every example below was executed on the
 transpiler (or is a fixture compared byte for byte by the suite).
@@ -24,12 +24,12 @@ transpiler (or is a fixture compared byte for byte by the suite).
 
 ## 0. Operation index
 
-All 74 operations with a one-line description. Normal operations emit
+All 75 operations with a one-line description. Normal operations emit
 GDScript directly; special operations vanish before transpilation
 (template structure resolved in the include/inheritance phases, macro
 forms expanded in the macro phase).
 
-### Normal transpilation operations (59 — emit GDScript)
+### Normal transpilation operations (60 — emit GDScript)
 
 | Operation | Short description |
 |---|---|
@@ -89,6 +89,7 @@ forms expanded in the macro phase).
 | `assert` | `assert(...)` statement. |
 | `breakpoint` | Bare `breakpoint` statement. |
 | `ternary` | `a if cond else b` expression. |
+| `unpack-arr-safe` | Safe array unpacking: per-index bounds-checked assignments. |
 | `array` | Array literal. |
 | `dict-lua` | Lua-style dict (`key = value`). |
 | `dict-json` | JSON-style dict (`key: value`). |
@@ -234,6 +235,48 @@ Invalid:
 - **Where allowed**: any level, including inside `func`.
 - **Where invalid**: without a value; `(const n T := v)`; `(lambda ...)`
   values (plain Godot rejects them); no `@` annotations.
+
+### `unpack-arr-safe` — `(unpack-arr-safe arr (specs...))`
+
+Unpacks an array into variables with per-index bounds checks. Each spec
+uses the same 5 positional forms as `var`, without the `var` head: bare
+atom (`a`), `(b)`, `(c int)`, `(d = 5)`, `(e := 6)`, `(f float = 0.5)`.
+Emits one `var` declaration per spec, one `<arr>_size_<n>` snapshot (`n`
+from a per-transpilation counter, so repeated unpacks never collide and
+the output stays deterministic), then one `if <size> > <i>:` guard per
+index (missing elements keep the declared default; assignments never
+carry type hints).
+Example:
+
+```lisp
+(unpack-arr-safe myarr (a (c int) (d float = 9.0)))
+```
+
+```gdscript
+var a
+var c: int
+var d: float = 9.0
+var myarr_size_0 = myarr.size()
+if myarr_size_0 > 0:
+	a = myarr[0]
+if myarr_size_0 > 1:
+	c = myarr[1]
+if myarr_size_0 > 2:
+	d = myarr[2]
+```
+
+Invalid (missing `=` before the default, like `var`):
+
+```lisp
+(unpack-arr-safe myarr ((d float 9)))
+```
+
+> `transpiler: missing '=' before default value: usage (unpack-arr-safe d float = value)`
+
+- **Where allowed**: any level (`top`, `member`, `local`).
+- **Where invalid**: as a value (`var` default, `return`, argument,
+  operand — it expands to multiple lines); empty spec list; non-atom
+  array; `@` annotations and `get`/`set` accessors in specs.
 
 ### `comment` — `(comment text...)`
 

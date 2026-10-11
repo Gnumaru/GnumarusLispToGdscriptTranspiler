@@ -55,3 +55,4 @@ func my_func(a: int) -> void:
 	var b: int = 1
 	b += 1
 	b = 1 + 2 + 3 + 4
+	return

@@ -71,6 +71,8 @@ func _init() -> void:
 	_test_collections()
 	_test_annotations()
 	_test_small_forms()
+	_test_unpack_forms()
+	_test_unpack_errors()
 	_test_includes()
 	_test_templates()
 	_test_macros()
@@ -884,6 +886,52 @@ func _test_small_forms() -> void:
 		_check("small error: %s" % c, r["ok"] == false, str(r))
 
 
+## Tests of (unpack-arr-safe ...): declarations in all var shapes,
+## deterministic size snapshots and per-index bounds checks.
+func _test_unpack_forms() -> void:
+	_check_transpiles("unpack single",
+		"(unpack-arr-safe myarr (a))",
+		"var a\nvar myarr_size_0 = myarr.size()\nif myarr_size_0 > 0:\n\ta = myarr[0]\n")
+	_check_transpiles("unpack full shapes",
+		"(unpack-arr-safe myarr (a (b) (c int) (d = 5) (e := 6) (f float = 0.5)))",
+		"var a\nvar b\nvar c: int\nvar d = 5\nvar e := 6\nvar f: float = 0.5\nvar myarr_size_0 = myarr.size()\nif myarr_size_0 > 0:\n\ta = myarr[0]\nif myarr_size_0 > 1:\n\tb = myarr[1]\nif myarr_size_0 > 2:\n\tc = myarr[2]\nif myarr_size_0 > 3:\n\td = myarr[3]\nif myarr_size_0 > 4:\n\te = myarr[4]\nif myarr_size_0 > 5:\n\tf = myarr[5]\n")
+	# Second unpack of the same array takes the next snapshot number.
+	_check_transpiles("unpack counter",
+		"(unpack-arr-safe myarr (a)) (unpack-arr-safe myarr (b))",
+		"var a\nvar myarr_size_0 = myarr.size()\nif myarr_size_0 > 0:\n\ta = myarr[0]\nvar b\nvar myarr_size_1 = myarr.size()\nif myarr_size_1 > 0:\n\tb = myarr[0]\n")
+	# Every pipeline run restarts the counter (fresh instance per call).
+	_check_transpiles("unpack counter reset",
+		"(unpack-arr-safe other (x))",
+		"var x\nvar other_size_0 = other.size()\nif other_size_0 > 0:\n\tx = other[0]\n")
+	# Inside a function body the guards indent one level deeper.
+	_check_transpiles("unpack local",
+		"(func f () (unpack-arr-safe myarr ((c int))))",
+		"func f():\n\tvar c: int\n\tvar myarr_size_0 = myarr.size()\n\tif myarr_size_0 > 0:\n\t\tc = myarr[0]\n")
+
+
+## Tests of invalid (unpack-arr-safe ...) forms: every one must fail.
+func _test_unpack_errors() -> void:
+	# Bare forms rejected by the facade (ok must be false).
+	var cases: Array = [
+		"(unpack-arr-safe)",
+		"(unpack-arr-safe myarr)",
+		"(unpack-arr-safe myarr (a) extra)",
+		"(unpack-arr-safe (a) (b))",
+		"(unpack-arr-safe myarr ())",
+		"(unpack-arr-safe myarr a)",
+		"(unpack-arr-safe myarr (()))",
+		"(unpack-arr-safe myarr ((d float 9)))",
+		"(unpack-arr-safe myarr ((n int := 5)))",
+		"(unpack-arr-safe (call f) (a))",
+		"(var x = (unpack-arr-safe myarr (a)))",
+		"(func f () (return (unpack-arr-safe myarr (a))))",
+	]
+	for c in cases:
+		# Facade result, expected to fail.
+		var r: Dictionary = FacadeScript.transpile_text(c)
+		_check("unpack error: %s" % c, r["ok"] == false, str(r))
+
+
 ## Tests of file inclusion: splicing, nesting, diamonds, cycles, depth,
 ## path kinds, usage errors and the transpiler dangling guard.
 func _test_includes() -> void:
@@ -1547,7 +1595,7 @@ func _test_highlighter() -> void:
 ## End to end tests: .gdl -> code identical to the expected .gd.
 func _test_end_to_end() -> void:
 	# Fixture cases (base file names under TESTS_DIR).
-	var cases: Array = ["Test1", "Test2", "Test3", "Test4", "Test5", "Test6", "StressTest"]
+	var cases: Array = ["Test1", "Test2", "Test3", "Test4", "Test5", "Test6", "Test7", "StressTest"]
 	for c in cases:
 		# Lisp input text read from the .gdl file.
 		var gdl: String = FileAccess.get_file_as_string(TESTS_DIR + "/" + c + ".gdl")
@@ -1569,7 +1617,7 @@ func _test_end_to_end() -> void:
 func _test_transpiler_errors() -> void:
 	# Transpiler instance holding the v1 operation table.
 	var transpiler: RefCounted = TranspilerScript.new()
-	_check("transpiler: 74 registered operations", transpiler.operation_names().size() == 74, str(transpiler.operation_names()))
+	_check("transpiler: 75 registered operations", transpiler.operation_names().size() == 75, str(transpiler.operation_names()))
 	# Unknown operation must fail, not invent output.
 	var r1: Dictionary = FacadeScript.transpile_text("(foo bar)")
 	_check("transpiler error: unknown operation", r1["ok"] == false, str(r1))
