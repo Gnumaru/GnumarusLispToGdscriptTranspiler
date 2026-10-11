@@ -1,4 +1,4 @@
-## Static facade of the Gnumarus Lisp → GDScript transpiler.
+## Static facade of the GDLisp → GDScript transpiler.
 ##
 ## Single entry point: takes Lisp text or a `.gdl` file path and returns a
 ## String of valid GDScript, chaining tokenizer, parser, template resolver

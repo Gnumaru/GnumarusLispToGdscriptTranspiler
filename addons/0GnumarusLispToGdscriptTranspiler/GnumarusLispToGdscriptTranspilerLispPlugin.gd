@@ -1,4 +1,4 @@
-## Dumb editor proxy for the Gnumarus Lisp addon.
+## Dumb editor proxy for the GDLisp addon.
 ##
 ## Per the addon rule, this class holds no logic: it instantiates
 ## GnumarusLispToGdscriptTranspilerLispPluginImpl in _init (passing itself) and every function below

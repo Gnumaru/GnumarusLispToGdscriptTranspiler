@@ -1,4 +1,4 @@
-## Position-aware color model for Gnumarus Lisp source text.
+## Position-aware color model for GDLisp source text.
 ##
 ## Scans whole documents in one pass (carrying paren depth and packed-string
 ## state across lines, like the tokenizer) and returns per-line color maps

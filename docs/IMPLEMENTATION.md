@@ -1,4 +1,4 @@
-# IMPLEMENTATION.md — Transpilador Gnumarus Lisp → GDScript (v1)
+# IMPLEMENTATION.md — Transpilador GDLisp → GDScript (v1)
 
 Documento de planejamento da etapa inicial. Todo o codigo mora em
 `addons/0GnumarusLispToGdscriptTranspiler/`, os testes em

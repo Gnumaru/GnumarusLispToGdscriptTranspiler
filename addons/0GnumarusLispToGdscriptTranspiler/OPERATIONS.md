@@ -1,4 +1,4 @@
-# OPERATIONS.md — Gnumarus Lisp → GDScript transpiler operations
+# OPERATIONS.md — GDLisp → GDScript transpiler operations
 
 Reference for all 74 implemented operations: name, description, where
 each form may appear, where using it is invalid, and usage examples with

@@ -1,4 +1,4 @@
-## Frozen GDScript theme data for Gnumarus Lisp highlighting.
+## Frozen GDScript theme data for GDLisp highlighting.
 ##
 ## Holds the exact word lists and default colors the Godot editor uses for
 ## GDScript (extracted from the 4.7.2 sources), so `.gdl` atoms can reuse the
