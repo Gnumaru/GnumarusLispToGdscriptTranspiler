@@ -1,0 +1,2 @@
+(class-name IncludeOnlyUser)
+(include "includeonly_snippet.gdl")

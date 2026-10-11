@@ -1,6 +1,6 @@
 # OPERATIONS.md — Gnumarus Lisp → GDScript transpiler operations
 
-Reference for all 73 implemented operations: name, description, where
+Reference for all 74 implemented operations: name, description, where
 each form may appear, where using it is invalid, and usage examples with
 the produced GDScript output. Every example below was executed on the
 transpiler (or is a fixture compared byte for byte by the suite).
@@ -21,6 +21,106 @@ transpiler (or is a fixture compared byte for byte by the suite).
 - **Dangling**: forms only valid in a special position (`elif`,
   `branch`, bare `lambda`...) fail with a usage error when they reach
   the transpiler outside of it.
+
+## 0. Operation index
+
+All 74 operations with a one-line description. Normal operations emit
+GDScript directly; special operations vanish before transpilation
+(template structure resolved in the include/inheritance phases, macro
+forms expanded in the macro phase).
+
+### Normal transpilation operations (59 — emit GDScript)
+
+| Operation | Short description |
+|---|---|
+| `class-name` | Declares `class_name`. |
+| `extends` | Declares `extends`. |
+| `var` | Declares a variable (5 positional forms). |
+| `static-var` | Declares a `static` variable. |
+| `const` | Declares a constant (always initialized). |
+| `comment` | Emits a `#` comment. |
+| `pass` | Emits `pass`. |
+| `func` | Declares a function. |
+| `static-func` | Declares a `static` function. |
+| `signal` | Declares a signal. |
+| `class` | Declares an inner class. |
+| `enum` | Declares an enum. |
+| `if` | `if` branch with optional trailing `elif`/`else`. |
+| `elif` | `elif` branch (only trailing inside `if`). |
+| `else` | `else` branch (only trailing inside `if`). |
+| `while` | `while` loop. |
+| `for` | `for ... in ...` loop (optional type). |
+| `break` | Emits `break`. |
+| `continue` | Emits `continue`. |
+| `return` | Emits `return` (optional value). |
+| `match` | `match` statement. |
+| `branch` | `match` branch (only as a direct child of `match`). |
+| `lambda` | Anonymous `func(...)` value (value positions only). |
+| `call` | Function call `name(args...)`. |
+| `chain` | Method/property chain `root.a().b`. |
+| `get` | Trailing `get` accessor of `var`/`static-var`. |
+| `set` | Trailing `set` accessor of `var`/`static-var`. |
+| `+` | N-ary addition `a + b + c`. |
+| `-` | Binary subtraction `a - b` / unary negation `-x`. |
+| `*` | Multiplication `a * b`. |
+| `/` | Division `a / b`. |
+| `%` | Remainder `a % b`. |
+| `**` | Power `a ** b`. |
+| `==` | Equality comparison. |
+| `!=` | Inequality comparison. |
+| `<` | Less-than comparison. |
+| `>` | Greater-than comparison. |
+| `<=` | Less-than-or-equal comparison. |
+| `>=` | Greater-than-or-equal comparison. |
+| `and` | N-ary logical `and`. |
+| `or` | N-ary logical `or`. |
+| `not` | Unary logical `not`. |
+| `is` | Type test `x is Node`. |
+| `as` | Cast `x as Node`. |
+| `in` | Membership test `x in arr`. |
+| `<<` | Left shift `a << 2`. |
+| `>>` | Right shift `a >> 2`. |
+| `&` | Bitwise and `a & b`. |
+| `|` | Bitwise or `a | b`. |
+| `^` | Bitwise xor `a ^ b`. |
+| `~` | Bitwise not `~a` (no space). |
+| `assign` | Assignment / compound assignment statement. |
+| `await` | `await` expression. |
+| `assert` | `assert(...)` statement. |
+| `breakpoint` | Bare `breakpoint` statement. |
+| `ternary` | `a if cond else b` expression. |
+| `array` | Array literal. |
+| `dict-lua` | Lua-style dict (`key = value`). |
+| `dict-json` | JSON-style dict (`key: value`). |
+
+Note: `@` annotations are not operations (no list form of their own);
+they are leading `@` atoms on `class-name`, `extends`, `var`,
+`static-var`, `func`, `static-func` and `class`.
+
+### Special template operations (5 — resolved before transpilation)
+
+| Operation | Short description |
+|---|---|
+| `include` | Splices another file's top-level forms. |
+| `block` | Declares (parent) / overrides (child) a named template block. |
+| `template-extends` | Inherits a child template from a parent file. |
+| `super` | Pastes the parent block default inside an override. |
+| `include-only` | Marks a file as an include-only snippet (no sidecar). |
+
+### Special macro operations (10 — expanded before transpilation)
+
+| Operation | Short description |
+|---|---|
+| `defmacro` | Defines a top-level syntactic macro. |
+| `join` | Concatenates atoms (macro bodies only). |
+| `upper` | Uppercases an atom (macro bodies only). |
+| `lower` | Lowercases an atom (macro bodies only). |
+| `capitalize` | Capitalizes an atom (macro bodies only). |
+| `for-generate` | Template generation: unrolls a body per value (range or list). |
+| `template-set` | Binds a template variable. |
+| `tvar` | Pastes a template variable value. |
+| `when` | Pastes a body when a variable is bound and truthy. |
+| `when-not` | Pastes a body when a variable is unbound or falsy. |
 
 ## 1. Declarations
 
@@ -732,11 +832,18 @@ var hp: int = 100
 
 ## 7. Meta-template and macros (vanish before GDScript)
 
-### `include` — `(include path)`
+### `include` — `(include path)` / `(include path trace)`
 
 Replaced by the file's top-level forms (glued splice, never nested).
-Paths: relative to the including file, `res://`, `user://`, system `/`.
+Paths: relative to the including file, `res://`, `user://`, system `/`,
+and current-user home `~/` (`USERPROFILE` with `HOME` fallback on
+Windows, `HOME` elsewhere; `~name` rejected).
 Guards: cycles (canonical stack) and max depth 32.
+With a `true` trace flag, the spliced forms come wrapped in marker
+comments (`false` or omitted: today's behavior). Markers are plain
+`(comment ...)` forms, so they follow normal statement rules (leading
+ones become declaration trailing comments) and compose across nesting
+levels; empty includes still emit both markers.
 Example (from a file; bare text + relative fails for lack of a base):
 
 ```lisp
@@ -747,9 +854,24 @@ Example (from a file; bare text + relative fails for lack of a base):
 # sibling note
 ```
 
+Traced example (`traced_user.gdl`):
+
+```lisp
+(class-name TracedUser)
+(include "traced_snippet.gdl" true)
+```
+
+```gdscript
+class_name TracedUser
+# BEGIN include traced_snippet.gdl (res://addons/0GnumarusLispToGdscriptTranspiler/tests/includes/traced_snippet.gdl)
+var tv = 3
+# END include traced_snippet.gdl (res://addons/0GnumarusLispToGdscriptTranspiler/tests/includes/traced_snippet.gdl)
+```
+
 - **Where allowed**: any position (expands structurally).
-- **Where invalid**: malformed forms; missing files; cycles; relative
-  paths without a base file.
+- **Where invalid**: malformed forms (bad arity, non-`true`/`false`
+  flag, traced paths with line breaks); missing files; cycles;
+  relative paths without a base file.
 
 ### `block` — `(block NAME body...)`
 
@@ -820,6 +942,18 @@ func _ready():
 
 - **Where allowed**: override bodies of a child only.
 - **Where invalid**: with arguments; without a parent block (dangling).
+
+### `include-only` — `(include-only)`
+
+Marks the file as include-only: the watcher produces no sidecar for
+it (parsed, never transpiled, so intentionally invalid snippets stay
+silent), and inclusion strips the marker before transpiling.
+Pre-existing siblings become kept orphans (delete once by hand).
+
+- **Where allowed**: bare, at the top level of snippet files.
+- **Where invalid**: reaching the transpiler (direct transpiles, inside
+  functions, malformed with arguments) fails naming the directive;
+  unknown in strict template-child tops.
 
 ### `defmacro` — `(defmacro NAME (params...) SINGLE-FORM-BODY)`
 

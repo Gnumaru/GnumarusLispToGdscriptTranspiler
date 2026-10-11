@@ -77,6 +77,7 @@ func _init() -> void:
 	_test_generate()
 	_test_set_when()
 	_test_watcher()
+	_test_include_only()
 	_test_highlighter()
 	_test_end_to_end()
 	_test_transpiler_errors()
@@ -898,6 +899,12 @@ func _test_includes() -> void:
 	_check("include diamond: ok", rdia["ok"] == true, str(rdia.get("error", "")))
 	if rdia["ok"]:
 		_check_eq("include diamond: output", rdia["code"], dia_expected)
+	# Include-only pair: the snippet marker never leaks into the user output.
+	var io_expected: String = FileAccess.get_file_as_string(INCLUDES_DIR + "/includeonly_user.gd")
+	var rio: Dictionary = FacadeScript.transpile_file(INCLUDES_DIR + "/includeonly_user.gdl")
+	_check("include only: ok", rio["ok"] == true, str(rio.get("error", "")))
+	if rio["ok"]:
+		_check_eq("include only: output", rio["code"], io_expected)
 	# Mutual cycle names the chain.
 	var rcyc: Dictionary = FacadeScript.transpile_file(INCLUDES_DIR + "/cycle_a.gdl")
 	_check("include cycle: fails", rcyc["ok"] == false, str(rcyc))
@@ -928,11 +935,54 @@ func _test_includes() -> void:
 	var rrel: Dictionary = FacadeScript.transpile_text("(include \"common/note.gdl\")")
 	_check("include relative text: fails", rrel["ok"] == false, str(rrel))
 	_check("include relative text: names base", str(rrel.get("error", "")).contains("no base"), str(rrel.get("error", "")))
+	# Home-relative missing files fail naming the expanded path (proving
+	# expansion with no disk writes outside the repo).
+	var rhome: Dictionary = FacadeScript.transpile_text("(include \"~/definitely-missing-gnumarus-12345.gdl\")")
+	_check("include home: fails", rhome["ok"] == false, str(rhome))
+	_check("include home: expanded", str(rhome.get("error", "")).contains("definitely-missing-gnumarus-12345.gdl") and not str(rhome.get("error", "")).contains("~"), str(rhome.get("error", "")))
+	# Bare home resolves too (a directory, so still not found as a file).
+	var rbare: Dictionary = FacadeScript.transpile_text("(include \"~\")")
+	_check("include bare home: fails", rbare["ok"] == false, str(rbare))
+	_check("include bare home: expanded", not str(rbare.get("error", "")).contains("\"~\""), str(rbare.get("error", "")))
+	# Other-user expansion is rejected with guidance.
+	var rother: Dictionary = FacadeScript.transpile_text("(include \"~other/x.gdl\")")
+	_check("include other user: fails", rother["ok"] == false, str(rother))
+	_check("include other user: guided", str(rother.get("error", "")).contains("start with"), str(rother.get("error", "")))
+	# Template parents share the same home expansion (no disk writes either).
+	var rthome: Dictionary = FacadeScript.transpile_text("(template-extends \"~/missing-parent-gnumarus-12345.gdl\") (block body (pass))")
+	_check("template home: fails", rthome["ok"] == false, str(rthome))
+	_check("template home: expanded", str(rthome.get("error", "")).contains("missing-parent-gnumarus-12345.gdl") and not str(rthome.get("error", "")).contains("~"), str(rthome.get("error", "")))
+	# Traced pair: markers wrap the spliced forms byte for byte.
+	var traced_expected: String = FileAccess.get_file_as_string(INCLUDES_DIR + "/traced_user.gd")
+	var rtraced: Dictionary = FacadeScript.transpile_file(INCLUDES_DIR + "/traced_user.gdl")
+	_check("include traced: ok", rtraced["ok"] == true, str(rtraced.get("error", "")))
+	if rtraced["ok"]:
+		_check_eq("include traced: output", rtraced["code"], traced_expected)
+	# Explicit false behaves like an omitted flag (no markers).
+	var rfalse: Dictionary = FacadeScript.transpile_text("(include \"" + INCLUDES_DIR + "/traced_snippet.gdl\" false)")
+	_check("include false: ok", rfalse["ok"] == true, str(rfalse.get("error", "")))
+	if rfalse["ok"]:
+		_check_eq("include false: output", rfalse["code"], "var tv = 3\n")
+	# Trace markers flow through normal statement rules (leading comments
+	# become the declaration trailing comment inside func bodies).
+	var rfunc: Dictionary = FacadeScript.transpile_text("(func f () (include \"" + INCLUDES_DIR + "/traced_snippet.gdl\" true) (pass))")
+	_check("include func: ok", rfunc["ok"] == true, str(rfunc.get("error", "")))
+	if rfunc["ok"]:
+		_check("include func: trailing", (rfunc["code"] as String).begins_with("func f(): # BEGIN include"), rfunc["code"])
+	# Nested traced includes compose with one pair per level.
+	var rnested: Dictionary = FacadeScript.transpile_text("(include \"" + INCLUDES_DIR + "/traced_mid.gdl\" true)")
+	_check("include nested: ok", rnested["ok"] == true, str(rnested.get("error", "")))
+	if rnested["ok"]:
+		_check_eq("include nested: pairs", (rnested["code"] as String).count("# BEGIN include"), 2)
 	# Malformed include forms fail before any file access.
 	var cases: Array = [
 		"(include)",
 		"(include \"a.gdl\" \"b.gdl\")",
 		"(include (name))",
+		"(include \"a.gdl\" yes)",
+		"(include \"a.gdl\" (x))",
+		"(include \"a.gdl\" true false)",
+		"(include \"a\nb\" true)",
 	]
 	for c in cases:
 		# Facade result, expected to fail.
@@ -1254,6 +1304,52 @@ func _test_watcher() -> void:
 	watcher._refresh_editor(["res://tmp/watch_probe.gd"])
 
 
+## Tests of the include-only directive: silent watcher skips (even when
+## invalid standalone), resume on unmarking, marker stripping on include,
+## dangling errors and the lime tint.
+func _test_include_only() -> void:
+	# Watcher implementation without editor (null proxy, core only).
+	var watcher: RefCounted = PluginImplScript.new(null)
+	# Invalid-standalone snippet: skipped with no output and no failure.
+	var snip: String = "res://tmp/snip_probe.gdl"
+	var sdst: String = "res://tmp/snip_probe.gd"
+	var probe: FileAccess = FileAccess.open(snip, FileAccess.WRITE)
+	probe.store_string("(include-only)\n(nope bar)\n")
+	probe.close()
+	var r1: Dictionary = watcher.transpile_sidecars("res://tmp")
+	_check("include-only: silent", (r1["updated"] as Array).is_empty() and (r1["failed"] as Array).is_empty(), str(r1))
+	_check("include-only: no sibling", not FileAccess.file_exists(sdst), "sidecar written")
+	# Same hash rescan stays silent (skip stamp, no re-probe noise).
+	var r2: Dictionary = watcher.transpile_sidecars("res://tmp")
+	_check("include-only: quiet", (r2["updated"] as Array).is_empty() and (r2["failed"] as Array).is_empty(), str(r2))
+	# Unmarked file resumes the normal path (now a plain failure, reported).
+	var edit: FileAccess = FileAccess.open(snip, FileAccess.WRITE)
+	edit.store_string("(nope bar)\n")
+	edit.close()
+	var r3: Dictionary = watcher.transpile_sidecars("res://tmp")
+	_check("include-only: resumed", (r3["failed"] as Array) == [snip], str(r3))
+	# Valid unmarked content generates the sibling.
+	var fix: FileAccess = FileAccess.open(snip, FileAccess.WRITE)
+	fix.store_string("(var ok = 1)\n")
+	fix.close()
+	var r4: Dictionary = watcher.transpile_sidecars("res://tmp", true)
+	_check("include-only: generated", (r4["updated"] as Array) == [sdst], str(r4))
+	DirAccess.remove_absolute(snip)
+	DirAccess.remove_absolute(sdst)
+	# Direct transpile of a marked file fails naming the directive.
+	var rdirect: Dictionary = FacadeScript.transpile_text("(include-only) (var a = 1)")
+	_check("include-only: dangling", rdirect["ok"] == false, str(rdirect))
+	_check("include-only: names directive", str(rdirect.get("error", "")).contains("include-only"), str(rdirect.get("error", "")))
+	# Marker inside functions and malformed markers fail too.
+	for c in ["(func f () (include-only) (pass))", "(include-only x)"]:
+		# Facade result, expected to fail.
+		var r: Dictionary = FacadeScript.transpile_text(c)
+		_check("include-only error: %s" % c, r["ok"] == false, str(r))
+	# Marker atoms carry the Gnumarus tint like other directives.
+	var colorizer: RefCounted = ColorizerScript.new()
+	_check_eq("include-only tint", colorizer.category_for_atom("include-only"), "gnumarus")
+
+
 ## Replicates the engine draw walk over one line map: entries apply in
 ## insertion order and the scan stops at the first greater key (see the
 ## TextEdit drawing loop), so this catches order bugs that key lookups miss.
@@ -1473,7 +1569,7 @@ func _test_end_to_end() -> void:
 func _test_transpiler_errors() -> void:
 	# Transpiler instance holding the v1 operation table.
 	var transpiler: RefCounted = TranspilerScript.new()
-	_check("transpiler: 73 registered operations", transpiler.operation_names().size() == 73, str(transpiler.operation_names()))
+	_check("transpiler: 74 registered operations", transpiler.operation_names().size() == 74, str(transpiler.operation_names()))
 	# Unknown operation must fail, not invent output.
 	var r1: Dictionary = FacadeScript.transpile_text("(foo bar)")
 	_check("transpiler error: unknown operation", r1["ok"] == false, str(r1))

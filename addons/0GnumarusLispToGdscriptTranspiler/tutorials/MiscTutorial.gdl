@@ -4,7 +4,12 @@
 # defining class names
 (class-name MyMiscTutorialClass) # line comments may start anywhere
 # defining inheritance
-(extends Node)
+(extends
+# line comments may even be in the middle of a list
+Node)
+
+# you can include other files, they are just copy/pasted inside this script before transpilation. you can include a relative file path, a system absolute file path, a res:// path or a user:// path
+(include MiscTutorialInc.gdl true) # a 'true' value right after the path will generate include comments marking the beginning and end of the included content. if false or missing, will not include the comments
 
 (comment this will generate a comment in gdscript)
 (comment 'this will also generate a comment in gdscript, but the quotes are discarded')
@@ -34,9 +39,47 @@
 (var @export my_export_var_0 int)
 (var @export my_export_var_1 float = 9.0)
 (var @export my_export_var_2 := true)
+# remember
+(var
+# that
+	@export
+# identation
+		my_export_var_3
+# doesn't
+			float
+# matter
+				=
+# at
+					9.0
+# all
+						)
 
 # declaring onreadies
-(var @onready my_onreadyexport_var_0 := $node)
-(var @onready my_onreadyexport_var_1 Node = %node)
+(var @onready my_onreadyexport_var_0 Node = %node)
+(var @onready my_onreadyexport_var_1 := $node)
+(var @onready my_onreadyexport_var_2 := $path/to/my/node)
 
 # properties with getters and setters
+(var my_prop_0 int = 0
+	(get
+		(return my_prop_0))
+	(set (p)
+		(assign my_prop_0 = p))
+)
+
+(var my_prop_1
+	(get (return my_prop_0))
+	(set (p) (assign my_prop_0 = p)))
+
+# macros
+# define a macro that tests if an object exists an has a method before calling it
+(defmacro safe-call (obj mname ...args)
+  (if (and obj (call (join obj ".has_method") (join "\"" mname "\"")))
+    (call (join obj "." mname) ...args)))
+
+# functions
+(func my_func (void ((a int)))
+	(var b int = 1)
+	(assign b += 1)
+	(assign b = (+ 1 2 3 4))
+)

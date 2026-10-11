@@ -17,6 +17,12 @@ extends RefCounted
 const FacadeScript = preload("res://addons/0GnumarusLispToGdscriptTranspiler/GnumarusLispToGdscriptTranspilerLisp.gd")
 ## Highlighter script, loaded by path (registered with the script editor).
 const HighlighterScript = preload("res://addons/0GnumarusLispToGdscriptTranspiler/GnumarusLispToGdscriptTranspilerGdlHighlighter.gd")
+## Tokenizer script, loaded by path (include-only probe parses only).
+const TokenizerScript = preload("res://addons/0GnumarusLispToGdscriptTranspiler/GnumarusLispToGdscriptTranspilerTokenizer.gd")
+## Parser script, loaded by path (include-only probe parses only).
+const ParserScript = preload("res://addons/0GnumarusLispToGdscriptTranspiler/GnumarusLispToGdscriptTranspilerParser.gd")
+## Include resolver script, loaded by path (bare marker check reuse).
+const IncludesScript = preload("res://addons/0GnumarusLispToGdscriptTranspiler/GnumarusLispToGdscriptTranspilerIncludeResolver.gd")
 ## Editor setting holding the comma-separated text file extensions.
 const TEXTFILE_EXTENSIONS_SETTING: String = "docks/filesystem/textfile_extensions"
 ## Project tool menu item name for manual transpilation.
@@ -43,6 +49,8 @@ var _highlighter: RefCounted = null
 var _done_stamp: Dictionary = {}
 ## Failed sources already reported: src path -> source content hash (no spam).
 var _failed_stamp: Dictionary = {}
+## Include-only sources already skipped: src path -> content hash (no re-probe).
+var _skipped_stamp: Dictionary = {}
 ## Whether an editor refresh is already scheduled (debounce window).
 var _refresh_pending: bool = false
 
@@ -137,6 +145,14 @@ func transpile_sidecars(p_root: String, p_force: bool = false) -> Dictionary:
 			continue
 		if not p_force and _failed_stamp.get(src, -1) == stamp:
 			continue
+		if not p_force and _skipped_stamp.get(src, -1) == stamp:
+			continue
+		# Include-only sources produce no sidecar (parsed, never transpiled).
+		if _is_include_only(src):
+			_skipped_stamp[src] = stamp
+			continue
+		_failed_stamp.erase(src)
+		_skipped_stamp.erase(src)
 		# Transpilation result for the source file.
 		var res: Dictionary = FacadeScript.transpile_file(src)
 		if not res["ok"]:
@@ -144,7 +160,6 @@ func transpile_sidecars(p_root: String, p_force: bool = false) -> Dictionary:
 			_failed_stamp[src] = stamp
 			failed.append(src)
 			continue
-		_failed_stamp.erase(src)
 		# Full output text: generated stamp plus transpiled code.
 		var text: String = GENERATED_STAMP % src.get_file() + "\n" + str(res["code"])
 		if FileAccess.file_exists(dst) and FileAccess.get_file_as_string(dst) == text:
@@ -267,6 +282,27 @@ static func collect_gdl(p_root: String) -> Array:
 	_collect_gdl_in(p_root, found)
 	found.sort()
 	return found
+
+
+## Tells whether a source is marked include-only (parse-only probe: a bare
+## top-level (include-only) form). Unparseable sources take the normal
+## error path instead of a silent skip. Static for headless testability.
+static func _is_include_only(p_src: String) -> bool:
+	# Source text of the probe file.
+	var text: String = FileAccess.get_file_as_string(p_src)
+	# Tokenizer output for the probe text.
+	var tok: Dictionary = TokenizerScript.tokenize(text)
+	if not tok["ok"]:
+		return false
+	# Parser output for the probe tokens.
+	var parsed: Dictionary = ParserScript.parse(tok["tokens"])
+	if not parsed["ok"]:
+		return false
+	for form in parsed["tree"]:
+		# Bare marker anywhere at the top level (shared shape rule).
+		if IncludesScript._is_include_only(form):
+			return true
+	return false
 
 
 ## Recursive scan worker appending `.gdl` paths (skips `.godot` and the

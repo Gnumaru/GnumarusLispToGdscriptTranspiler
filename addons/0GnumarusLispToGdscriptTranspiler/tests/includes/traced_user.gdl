@@ -1,0 +1,2 @@
+(class-name TracedUser)
+(include "traced_snippet.gdl" true)

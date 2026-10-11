@@ -96,6 +96,7 @@ func _init() -> void:
 		"dict-lua": Callable(self, "_emit_dict_lua"),
 		"dict-json": Callable(self, "_emit_dict_json"),
 		"include": Callable(self, "_emit_include_dangling"),
+		"include-only": Callable(self, "_emit_include_only_dangling"),
 		"block": Callable(self, "_emit_block_dangling"),
 		"template-extends": Callable(self, "_emit_template_extends_dangling"),
 		"defmacro": Callable(self, "_emit_defmacro_dangling"),
@@ -1174,6 +1175,13 @@ func _emit_set_dangling(p_form: Array, _p_indent: int, _p_context: String) -> Di
 ## Always an error: includes expand in the resolver stage, before transpiling.
 func _emit_include_dangling(p_form: Array, _p_indent: int, _p_context: String) -> Dictionary:
 	return _fail("include forms must be resolved before transpiling")
+
+
+## Dangling (include-only) reached as a statement instead of a file marker.
+## Always an error: include-only files produce no output (the watcher skips
+## them and inclusion strips the marker before transpiling).
+func _emit_include_only_dangling(p_form: Array, _p_indent: int, _p_context: String) -> Dictionary:
+	return _fail("\"(include-only)\" is only valid at the top level of include-only files (it never reaches transpiled output)")
 
 
 ## Dangling (block ...) reached the transpiler unresolved.

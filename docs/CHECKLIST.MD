@@ -17,6 +17,21 @@ Legenda: `[x]` feito, `[ ]` pendente/futuro.
 - [x] 11. Validacao — importar o projeto headless, rodar o TestRunner e checar `--check-only` nos `.gd` gerados/esperados.
 - [x] 12. Documentacao — comentarios `##`/`#` em toda classe, funcao e variavel.
 
+## Revisao v3.21 — include rastreado (`true`)
+
+- [x] 156. Flag `trace` em `_expand_include` (marcadores `# BEGIN/END` com spec + resolvido; `false`/ausente inalterado; spec com quebra de linha rejeitado).
+- [x] 157. Fixtures `traced_*` (par, meio aninhado) + casos (flag, func, aninhado, malformados); OPERATIONS + IMPLEMENTATION; TestRunner 847/847 + `--check-only`.
+
+## Revisao v3.20 — includes com `~/` (home)
+
+- [x] 154. `_resolve_path` com `~`/`~/` (proprio usuario; `USERPROFILE`/`HOME`; `~nome` rejeitado); vale para `include` e `template-extends` (resolvedor compartilhado).
+- [x] 155. Testes sem disco fora do repo (caminho expandido citado no erro); docs; TestRunner 835/835 + `--check-only`.
+
+## Revisao v3.19 — diretiva `(include-only)`
+
+- [x] 152. 74a entrada (dangling) + descarte no splice do include + pre-check silencioso no watcher com `_skipped_stamp` (retomada por hash; orfao mantido).
+- [x] 153. Fixtures `includeonly_*` + bateria `_test_include_only` (skip/retomada/dangling/tinta); OPERATIONS + IMPLEMENTATION; TestRunner 827/827 + `--check-only`.
+
 ## Revisao v3.18 — re-check de editores abertos
 
 - [x] 150. `reload_open_files()` apos escrever: editores abertos so re-checam em foco/aba/save, nunca em sinais — agora re-checam no save (mudo com auto-reload, dialogo sem; confirmado em editor).

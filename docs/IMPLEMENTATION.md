@@ -203,9 +203,15 @@ como `@abstract` em `static`).
 
 Includes (`GnumarusLispToGdscriptTranspilerIncludeResolver`, fase 2/meta-template): `(include
 caminho)` em qualquer posicao e **substituido pelas formas de topo** do
-arquivo (splice colado, nunca aninhado; vazio some; empacotado intocado).
+arquivo (splice colado, nunca aninhado; vazio some; empacotado intocado;
+formas `(include-only)` nuas sao descartadas no splice).
 Caminhos: relativo ao arquivo que inclui, `res://`, `user://`, `/` de
-sistema (`/c:` no Windows); texto puro + relativo e erro (sem base).
+sistema (`/c:` no Windows) e `~/` do lar atual (so proprio usuario:
+`USERPROFILE` com fallback `HOME` no Windows, `HOME` no resto;
+`~nome` e rejeitado; vazio em tudo e erro); texto puro + relativo e
+erro (sem base). Flag opcional de rastreio `(include caminho true)`:
+envolve as formas com `# BEGIN/END include <spec> (<resolvido)>`
+(sempre emitidos, mesmo vazios; compostos por nivel).
 Guardas: pilha canonica (`globalize_path` em `res://`) detecta ciclo e
 mostra a cadeia; profundidade maxima 32 (default). Roda apos o parse e
 antes do transpiler (e das futuras macros). Include em posicao esquisita
@@ -220,7 +226,7 @@ nome, colando o corpo do filho no lugar (nunca aninhado). Pai sozinho
 continua valido (bloco vira o default colado, inclusive vazio que some).
 Nomes planos (aninhados no mesmo namespace). Filho estrito: no topo so
 extends + `block`; bloco desconhecido, duplicado ou extends fora da
-primeira posicao e erro. Caminhos do pai: mesmas 4 formas do include,
+primeira posicao e erro. Caminhos do pai: mesmas 5 formas do include,
 relativo ao filho; includes resolvem por lado (pai com base do pai,
 corpos do filho com base do filho) antes do merge; cadeias (pai com
 extends) recursam; pilha canonica + limite 32. `(super)` sem args em corpo
@@ -360,7 +366,9 @@ cada irmao via `update_file` (sincrono, novos e alterados — scan puro
 cega no mesmo segundo: `st_mtime` tem precisao de segundos e diretorios
 com mtime igual sao pulados) com scan diferido de rede para pastas
 desconhecidas; carimba
-`GENERATED ... DO NOT EDIT`; editores abertos re-checam via
+`GENERATED ... DO NOT EDIT`; fontes marcadas `(include-only)` nao geram
+irmao (pre-checagem por parse, silenciosa, com carimbo proprio; irmao
+antigo vira orfao mantido); editores abertos re-checam via
 `reload_open_files()` (mudo com auto-reload, dialogo sem); falha com `push_error` e so retenta se a
 fonte mudar; fonte deletada deixa o orfao. Edicao em include/pai nao retriggera dependentes
 (item manual força tudo). Ao ativar, adiciona `gdl` em

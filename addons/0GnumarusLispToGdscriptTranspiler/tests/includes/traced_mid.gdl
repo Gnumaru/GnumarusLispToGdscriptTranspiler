@@ -1,0 +1,2 @@
+(include "traced_snippet.gdl" true)
+(var mid = 4)
