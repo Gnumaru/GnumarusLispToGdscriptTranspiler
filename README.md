@@ -1,2 +1,2 @@
-# Gnumaru's Lisp to GDScript Transpiler
-Transpiles a lisp dialect to gdscript. Support includes, macros and templatization.
+# Gnumaru's GDLisp to GDScript Transpiler
+Transpiles GDLisp to GDScript. Supports includes, macros and templatization.

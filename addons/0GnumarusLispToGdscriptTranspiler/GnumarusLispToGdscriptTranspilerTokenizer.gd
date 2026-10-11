@@ -1,4 +1,4 @@
-## Tokenizer for the Gnumarus transpiler Lisp dialect.
+## Tokenizer for the GDLisp dialect.
 ##
 ## Turns source text into a flat token list: each atom becomes a String and
 ## each structural paren becomes "(" or ")". It builds no structure (that is

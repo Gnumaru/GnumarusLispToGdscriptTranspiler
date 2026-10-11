@@ -1,4 +1,4 @@
-## Dumb editor proxy for the Gnumarus `.gdl` syntax highlighter.
+## Dumb editor proxy for the GDLisp `.gdl` syntax highlighter.
 ##
 ## Per the addon rule, this class holds no logic: it instantiates
 ## GnumarusLispToGdscriptTranspilerGdlHighlighterImpl in _init (passing itself) and every function

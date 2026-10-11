@@ -17,6 +17,10 @@ Legenda: `[x]` feito, `[ ]` pendente/futuro.
 - [x] 11. Validacao — importar o projeto headless, rodar o TestRunner e checar `--check-only` nos `.gd` gerados/esperados.
 - [x] 12. Documentacao — comentarios `##`/`#` em toda classe, funcao e variavel.
 
+## Revisao v3.22 — nome da linguagem (GDLisp)
+
+- [x] 158. Renomeado o nome do formato de "Gnumarus"/"Gnumarus Lisp" para GDLisp em prosa de comentarios e docs (`... transpiler Lisp dialect` vira `... GDLisp dialect`, `Gnumarus-only` vira `GDLisp-only`); strings visiveis (menu `Transpile GDLisp files`, carimbo `BY GDLISP`, dropdown `GDLisp 3.8`, logs `GDLisp:`), chave de cor `gnumarus` → `gdlisp` e testes/fixtures acompanham. Identificadores, caminhos, `author` do `plugin.cfg` e historico de revisoes (nomes atualizados) intactos; TestRunner 847/847 + `--check-only`.
+
 ## Revisao v3.21 — include rastreado (`true`)
 
 - [x] 156. Flag `trace` em `_expand_include` (marcadores `# BEGIN/END` com spec + resolvido; `false`/ausente inalterado; spec com quebra de linha rejeitado).
@@ -74,7 +78,7 @@ Legenda: `[x]` feito, `[ ]` pendente/futuro.
 
 ## Revisao v3.10 — prefixo das classes (GnumarusLispToGdscriptTranspiler*)
 
-- [x] 134. 13 arquivos + `.uid` renomeados; 94 trocas de identificadores (`class_name`, preloads, `plugin.cfg`, refs em comentarios/docs); prosa, carimbo `GNUMARUS`, menu e nome do dropdown intactos.
+- [x] 134. 13 arquivos + `.uid` renomeados; 94 trocas de identificadores (`class_name`, preloads, `plugin.cfg`, refs em comentarios/docs); prosa, carimbo `GDLISP`, menu e nome do dropdown intactos.
 - [x] 135. 2 comentarios obsoletos ("keyword fallback") corrigidos; cache global reconstruido (check-only do proxy); TestRunner 753/753 + `--check-only` em tudo + zero carimbos.
 
 ## Revisao v3.9 — rename do diretorio (0Gnumarus...)
@@ -82,9 +86,9 @@ Legenda: `[x]` feito, `[ ]` pendente/futuro.
 - [x] 132. Diretorio renomeado para `0GnumarusLispToGdscriptTranspiler` (ordenacao no dock); `plugin.cfg` intacto (caminho relativo); `project.godot` ja estava sem a entrada do plugin.
 - [x] 133. Troca mecanica do prefixo em 10 `.gd` + 2 docs (sem `class_name` afetado); TestRunner 753/753 no novo caminho + `--check-only` + zero carimbos.
 
-## Revisao v3.8 — matiz proprio das operacoes Gnumarus
+## Revisao v3.8 — matiz proprio das operacoes GDLisp
 
-- [x] 130. Categoria `gnumarus` (lima inventado, configuravel, sem chave no editor): ops so-Gnumarus distinguiveis a olho; palavras GDScript intactas, segmentos de hifen independentes.
+- [x] 130. Categoria `gdlisp` (lima inventado, configuravel, sem chave no editor): ops so-GDLisp distinguiveis a olho; palavras GDScript intactas, segmentos de hifen independentes.
 - [x] 131. `CATEGORIES` no tema (validacao do `configure` + `theme_hash`); versao do dropdown em 3.8; TestRunner 753/753 + `--check-only`.
 
 ## Revisao v3.7 — ordem das entradas (contrato do TextEdit)
@@ -97,7 +101,7 @@ Legenda: `[x]` feito, `[ ]` pendente/futuro.
 - [x] 124. Categoria `text` (`text_color`) + preenchimento dos vaos em `compute_all`: nenhuma cor vaza para a direita.
 - [x] 125. `_paint_hyphenated` (so `-` interior; `-5` intacto; `=` e nomes no cinza texto, sem tocar em `.`/`/`).
 - [x] 126. Checks de vao, fatiamento (`static-var`, `class-name`, `when-not`) e negativo; TestRunner 738/738 + `--check-only`.
-- [x] 127. Nome do highlighter versionado (`Gnumarus 3.6`, via `HIGHLIGHTER_VERSION`) para o dropdown do editor dizer qual regra esta ativa.
+- [x] 127. Nome do highlighter versionado (`GDLisp 3.6`, via `HIGHLIGHTER_VERSION`) para o dropdown do editor dizer qual regra esta ativa.
 
 ## Revisao v3.5 — watcher ignora fixtures do addon
 
@@ -130,7 +134,7 @@ Legenda: `[x]` feito, `[ ]` pendente/futuro.
 ## Revisao v3.1 — EditorImportPlugin `.gdl` (addon de verdade)
 
 - [x] 104. Regra nova do AGENTS.md: proxies burros (`GnumarusLispToGdscriptTranspilerGdlImport`, `GnumarusLispToGdscriptTranspilerLispPlugin`) + impls `RefCounted` (`GnumarusLispToGdscriptTranspilerGdlImportImpl`, `GnumarusLispToGdscriptTranspilerLispPluginImpl`) + `plugin.cfg`.
-- [x] 105. Importer `gnumarus.gdl`: extensao `gdl`, saida `gd`, tipo `Script`, 1 preset; `_import` transpila e escreve (OK / ERR_FILE_NOT_FOUND / ERR_PARSE_ERROR / ERR_CANT_CREATE).
+- [x] 105. Importer `gdlisp.gdl`: extensao `gdl`, saida `gd`, tipo `Script`, 1 preset; `_import` transpila e escreve (OK / ERR_FILE_NOT_FOUND / ERR_PARSE_ERROR / ERR_CANT_CREATE).
 - [x] 106. Bateria `_test_import_plugin` (metadados via proxy, round-trip em `./tmp`, falhas, wiring do plugin); sem ligar no `project.godot` (fixtures quebrados de proposito poluiriam o import).
 - [x] 107. Revalidar: TestRunner 0 falhas + `--check-only` nos `.gd` (inclui proxies/impls) + ativacao temporaria provando o `plugin.cfg`.
 

@@ -42,7 +42,7 @@ func _init(p_proxy: Object) -> void:
 ## Display name shown in the editor highlighter menu (versioned, so the
 ## dropdown tells which coloring rules are actually running).
 func _get_name() -> String:
-	return "Gnumarus " + HIGHLIGHTER_VERSION
+	return "GDLisp " + HIGHLIGHTER_VERSION
 
 
 ## Extensions auto-selecting this highlighter (matched against the file

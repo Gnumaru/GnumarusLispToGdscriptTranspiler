@@ -1,4 +1,4 @@
-## Macro expander for the Gnumarus transpiler Lisp dialect.
+## Macro expander for the GDLisp dialect.
 ##
 ## Implements user-defined syntactic macros: (defmacro NAME (PARAMS...) BODY)
 ## declares a single-form template, and (NAME ARGS...) call sites are replaced

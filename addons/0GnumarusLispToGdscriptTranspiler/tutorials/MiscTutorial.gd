@@ -1,4 +1,4 @@
-# GENERATED FROM MiscTutorial.gdl BY GNUMARUS - DO NOT EDIT
+# GENERATED FROM MiscTutorial.gdl BY GDLISP - DO NOT EDIT
 class_name MyMiscTutorialClass
 extends Node
 # BEGIN include MiscTutorialInc.gdl (res://addons/0GnumarusLispToGdscriptTranspiler/tutorials/MiscTutorialInc.gdl)

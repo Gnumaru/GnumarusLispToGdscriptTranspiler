@@ -1,4 +1,4 @@
-## Include resolver for the Gnumarus transpiler Lisp dialect.
+## Include resolver for the GDLisp dialect.
 ##
 ## Expands (include PATH) forms anywhere in the parse tree, replacing each one
 ## with the top-level forms of the referenced file — as if the file content

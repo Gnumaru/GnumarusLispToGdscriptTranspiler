@@ -1,4 +1,4 @@
-## Template resolver for the Gnumarus transpiler Lisp dialect.
+## Template resolver for the GDLisp dialect.
 ##
 ## Implements Jinja-style template inheritance: a parent file declares named
 ## (block NAME body...) placeholders, and a child file starting with

@@ -10,7 +10,7 @@
 ## number color, `@` atoms with the GDScript annotation color, and bare
 ## atoms with the exact GDScript color of their word class (plain keywords,
 ## control-flow keywords kept separate, base types, engine classes, global
-## functions and get/set), independent of context. Gnumarus-only operations
+## functions and get/set), independent of context. GDLisp-only operations
 ## take an invented lime tint through the live transpiler table (new
 ## operations never rot the highlighting), so they read apart from
 ## GDScript words at a glance. Theme colors arrive through
@@ -49,7 +49,7 @@ const INDENT_DARKEN: float = 0.25
 
 ## Active color per category name (synced from the theme, see configure).
 var _colors: Dictionary = {}
-## Gnumarus-only operation names (live transpiler table, lime tint).
+## GDLisp-only operation names (live transpiler table, lime tint).
 var _gdl_ops: Dictionary = {}
 ## GDScript control-flow keywords for O(1) lookup.
 var _control_flow: Dictionary = {}
@@ -61,7 +61,7 @@ var _function_words: Dictionary = {}
 var _base_types: Dictionary = {}
 ## GDScript global functions for O(1) lookup.
 var _global_functions: Dictionary = {}
-## Gnumarus-only control-flow operations for O(1) lookup.
+## GDLisp-only control-flow operations for O(1) lookup.
 var _gdl_control_flow: Dictionary = {}
 ## Engine class names for O(1) lookup (live ClassDB list).
 var _engine_types: Dictionary = {}
@@ -74,7 +74,7 @@ var _indent_colors: Array = []
 func _init() -> void:
 	# Fallback colors (the impl overwrites them with EditorSettings values).
 	_colors = ThemeScript.default_colors()
-	# Gnumarus operations as lime-tinted ops (never rots when ops are added).
+	# GDLisp operations as lime-tinted ops (never rots when ops are added).
 	var probe: RefCounted = TranspilerScript.new()
 	for op in probe.operation_names():
 		_gdl_ops[op] = true
@@ -99,7 +99,7 @@ func _init() -> void:
 
 ## Replaces theme colors with editor values (category name -> Color).
 ## Unknown categories or non-Color values fail without applying anything.
-## The "gnumarus" tint has no editor key (invented here) but stays
+## The "gdlisp" tint has no editor key (invented here) but stays
 ## configurable through the same call. Returns {"ok": bool, "error": String}.
 func configure(p_colors: Dictionary) -> Dictionary:
 	# Pending colors validated before touching the active table.
@@ -134,7 +134,7 @@ func theme_hash() -> int:
 ## Names the word class of one bare atom ("" keeps the theme default).
 ## Order mirrors the GDScript highlighter: annotations, control flow,
 ## get/set functions, plain keywords, global functions, base types, engine
-## types, then Gnumarus-only operations (own lime tint, never the GDScript
+## types, then GDLisp-only operations (own lime tint, never the GDScript
 ## reds), then numbers. Whole-word class: hyphenated operations report
 ## their dominant class here while the display (see _paint_atom) splits
 ## their sub-words.
@@ -157,7 +157,7 @@ func category_for_atom(p_word: String) -> String:
 	if _engine_types.has(p_word):
 		return "engine_type"
 	if _gdl_ops.has(p_word):
-		return "gnumarus"
+		return "gdlisp"
 	if p_word.is_valid_int() or p_word.is_valid_float():
 		return "number"
 	return ""

@@ -386,7 +386,7 @@ globais, anotacoes; vermelho de erro constante, sem chave de tema).
 `GnumarusLispToGdscriptTranspilerGdlColorizer` classifica cada atomo sem contexto pela mesma cor do
 GDScript (`category_for_atom`/`color_for_atom` publicos e testaveis;
 `configure` injeta cores e `theme_hash` distingue troca de tema de edicao
-de texto); tipos da engine via `ClassDB` ao vivo, ops so-Gnumarus caem no
+de texto); tipos da engine via `ClassDB` ao vivo, ops so-GDLisp caem no
 keyword pela tabela viva, rainbow de parenteses e indent mantidos.
 `GnumarusLispToGdscriptTranspilerGdlHighlighterImpl` (`RefCounted`, dono do colorizer + memo por
 hash de texto + hash de tema) sincroniza de `EditorSettings`
@@ -400,8 +400,8 @@ nunca fatia, `-5` segue numero). Mapas saem com chaves em ordem ascendente
 de coluna: o loop de desenho do `TextEdit` percorre as entradas em ordem
 de insercao e para na primeira chave maior (v3.7; sem isso os vaos
 preenchidos por ultimo vazavam na tela mesmo com o mapa correto).
-Operacoes so-Gnumarus (`call`, `defmacro`, `join`, `lambda`...) levam um
-lima inventado (`gnumarus`, sem chave no editor); palavras do GDScript
+Operacoes so-GDLisp (`call`, `defmacro`, `join`, `lambda`...) levam um
+lima inventado (`gdlisp`, sem chave no editor); palavras do GDScript
 seguem fieis, e segmentos de hifen classificam sozinhos (`static-var`
 segue vermelho/vermelho, `template-set` sai texto/azul de funcao).
 

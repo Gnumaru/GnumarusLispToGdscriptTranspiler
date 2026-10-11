@@ -3,7 +3,7 @@
 ## Watches `.gdl` files and transpiles them to sibling `.gd` files (same
 ## directory, never `.godot/imported`): on editor start it connects to the
 ## filesystem `filesystem_changed` signal, and the Project menu gains a
-## manual "Transpile Gnumarus files" item. Only changed sources transpile
+## manual "Transpile GDLisp files" item. Only changed sources transpile
 ## (session stamps, no clock reads), outputs are only rewritten when content
 ## differs, failures are reported with push_error and retried only after the
 ## source changes again. Deleted sources leave their orphan `.gd` behind.
@@ -26,7 +26,7 @@ const IncludesScript = preload("res://addons/0GnumarusLispToGdscriptTranspiler/G
 ## Editor setting holding the comma-separated text file extensions.
 const TEXTFILE_EXTENSIONS_SETTING: String = "docks/filesystem/textfile_extensions"
 ## Project tool menu item name for manual transpilation.
-const TOOL_MENU_NAME: String = "Transpile Gnumarus files"
+const TOOL_MENU_NAME: String = "Transpile GDLisp files"
 ## Delay between editor refresh retries, in seconds.
 const REFRESH_DELAY: float = 0.5
 ## Maximum refresh attempts before scanning anyway (last resort).
@@ -36,14 +36,14 @@ const REFRESH_TRIES: int = 10
 ## so saving a `.gdl` while hacking the addon cannot stamp them).
 const ADDON_TESTS_ROOT: String = "res://addons/0GnumarusLispToGdscriptTranspiler/tests"
 ## First line stamped on generated files (source name appended).
-const GENERATED_STAMP: String = "# GENERATED FROM %s BY GNUMARUS - DO NOT EDIT"
+const GENERATED_STAMP: String = "# GENERATED FROM %s BY GDLISP - DO NOT EDIT"
 
 
 ## Proxy owning this implementation (editor calls go through it).
 var _proxy: Object
 ## Whether the editor wiring is active (enter/exit guard).
 var _entered: bool = false
-## Registered Gnumarus highlighter (kept alive while registered).
+## Registered GDLisp highlighter (kept alive while registered).
 var _highlighter: RefCounted = null
 ## Sibling outputs already generated: dst path -> source content hash.
 var _done_stamp: Dictionary = {}
@@ -71,7 +71,7 @@ func _enter_tree() -> void:
 	if not filesystem.is_connected("filesystem_changed", Callable(self, "_on_filesystem_changed")):
 		filesystem.filesystem_changed.connect(Callable(self, "_on_filesystem_changed"))
 	_proxy.add_tool_menu_item(TOOL_MENU_NAME, Callable(self, "transpile_all"))
-	# Gnumarus highlighter for `.gdl` sources (auto-selected by extension;
+	# GDLisp highlighter for `.gdl` sources (auto-selected by extension;
 	# files opened before registration need a reopen to pick it up).
 	_highlighter = HighlighterScript.new()
 	_proxy.get_editor_interface().get_script_editor().register_syntax_highlighter(_highlighter)
@@ -123,7 +123,7 @@ func _on_filesystem_changed() -> void:
 func transpile_all() -> void:
 	# Bring-everything result across the whole project.
 	var res: Dictionary = transpile_sidecars("res://", true)
-	print("Gnumarus: %d file(s) updated, %d failed" % [(res["updated"] as Array).size(), (res["failed"] as Array).size()])
+	print("GDLisp: %d file(s) updated, %d failed" % [(res["updated"] as Array).size(), (res["failed"] as Array).size()])
 
 
 ## Transpiles every stale `.gdl` under p_root to a sibling `.gd`.
@@ -156,7 +156,7 @@ func transpile_sidecars(p_root: String, p_force: bool = false) -> Dictionary:
 		# Transpilation result for the source file.
 		var res: Dictionary = FacadeScript.transpile_file(src)
 		if not res["ok"]:
-			push_error("Gnumarus: %s" % str(res["error"]))
+			push_error("GDLisp: %s" % str(res["error"]))
 			_failed_stamp[src] = stamp
 			failed.append(src)
 			continue
@@ -168,7 +168,7 @@ func transpile_sidecars(p_root: String, p_force: bool = false) -> Dictionary:
 		# Output handle for the sibling GDScript file.
 		var out: FileAccess = FileAccess.open(dst, FileAccess.WRITE)
 		if out == null:
-			push_error("Gnumarus: cannot write output for: %s" % src)
+			push_error("GDLisp: cannot write output for: %s" % src)
 			_failed_stamp[src] = stamp
 			failed.append(src)
 			continue
@@ -314,7 +314,7 @@ static func _collect_gdl_in(p_dir: String, p_found: Array) -> void:
 	# Directory handle for listing entries.
 	var dir: DirAccess = DirAccess.open(p_dir)
 	if dir == null:
-		push_error("Gnumarus: cannot scan directory: %s" % p_dir)
+		push_error("GDLisp: cannot scan directory: %s" % p_dir)
 		return
 	dir.list_dir_begin()
 	# Current entry name ("" ends the listing).

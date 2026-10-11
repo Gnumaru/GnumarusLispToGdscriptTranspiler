@@ -1,4 +1,4 @@
-## Parser for the Gnumarus transpiler Lisp dialect.
+## Parser for the GDLisp dialect.
 ##
 ## Turns the GnumarusLispToGdscriptTranspilerTokenizer flat token list into a nested tree: each paren
 ## pair becomes an Array, each atom stays a String. The top-level result is an

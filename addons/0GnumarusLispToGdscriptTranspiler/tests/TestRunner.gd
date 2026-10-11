@@ -937,9 +937,9 @@ func _test_includes() -> void:
 	_check("include relative text: names base", str(rrel.get("error", "")).contains("no base"), str(rrel.get("error", "")))
 	# Home-relative missing files fail naming the expanded path (proving
 	# expansion with no disk writes outside the repo).
-	var rhome: Dictionary = FacadeScript.transpile_text("(include \"~/definitely-missing-gnumarus-12345.gdl\")")
+	var rhome: Dictionary = FacadeScript.transpile_text("(include \"~/definitely-missing-gdlisp-12345.gdl\")")
 	_check("include home: fails", rhome["ok"] == false, str(rhome))
-	_check("include home: expanded", str(rhome.get("error", "")).contains("definitely-missing-gnumarus-12345.gdl") and not str(rhome.get("error", "")).contains("~"), str(rhome.get("error", "")))
+	_check("include home: expanded", str(rhome.get("error", "")).contains("definitely-missing-gdlisp-12345.gdl") and not str(rhome.get("error", "")).contains("~"), str(rhome.get("error", "")))
 	# Bare home resolves too (a directory, so still not found as a file).
 	var rbare: Dictionary = FacadeScript.transpile_text("(include \"~\")")
 	_check("include bare home: fails", rbare["ok"] == false, str(rbare))
@@ -949,9 +949,9 @@ func _test_includes() -> void:
 	_check("include other user: fails", rother["ok"] == false, str(rother))
 	_check("include other user: guided", str(rother.get("error", "")).contains("start with"), str(rother.get("error", "")))
 	# Template parents share the same home expansion (no disk writes either).
-	var rthome: Dictionary = FacadeScript.transpile_text("(template-extends \"~/missing-parent-gnumarus-12345.gdl\") (block body (pass))")
+	var rthome: Dictionary = FacadeScript.transpile_text("(template-extends \"~/missing-parent-gdlisp-12345.gdl\") (block body (pass))")
 	_check("template home: fails", rthome["ok"] == false, str(rthome))
-	_check("template home: expanded", str(rthome.get("error", "")).contains("missing-parent-gnumarus-12345.gdl") and not str(rthome.get("error", "")).contains("~"), str(rthome.get("error", "")))
+	_check("template home: expanded", str(rthome.get("error", "")).contains("missing-parent-gdlisp-12345.gdl") and not str(rthome.get("error", "")).contains("~"), str(rthome.get("error", "")))
 	# Traced pair: markers wrap the spliced forms byte for byte.
 	var traced_expected: String = FileAccess.get_file_as_string(INCLUDES_DIR + "/traced_user.gd")
 	var rtraced: Dictionary = FacadeScript.transpile_file(INCLUDES_DIR + "/traced_user.gdl")
@@ -1262,7 +1262,7 @@ func _test_watcher() -> void:
 	# First run writes the stamped sibling.
 	var r1: Dictionary = watcher.transpile_sidecars("res://tmp")
 	_check("watcher: updated", (r1["updated"] as Array) == [dst], str(r1))
-	_check_eq("watcher: content", FileAccess.get_file_as_string(dst), "# GENERATED FROM watch_probe.gdl BY GNUMARUS - DO NOT EDIT\nclass_name WatchProbe\nextends Node\nvar w = 7\n")
+	_check_eq("watcher: content", FileAccess.get_file_as_string(dst), "# GENERATED FROM watch_probe.gdl BY GDLISP - DO NOT EDIT\nclass_name WatchProbe\nextends Node\nvar w = 7\n")
 	# Second run changes nothing (content hashes, no rewrite).
 	var r2: Dictionary = watcher.transpile_sidecars("res://tmp")
 	_check("watcher: quiet", (r2["updated"] as Array).is_empty() and (r2["failed"] as Array).is_empty(), str(r2))
@@ -1345,9 +1345,9 @@ func _test_include_only() -> void:
 		# Facade result, expected to fail.
 		var r: Dictionary = FacadeScript.transpile_text(c)
 		_check("include-only error: %s" % c, r["ok"] == false, str(r))
-	# Marker atoms carry the Gnumarus tint like other directives.
+	# Marker atoms carry the GDLisp tint like other directives.
 	var colorizer: RefCounted = ColorizerScript.new()
-	_check_eq("include-only tint", colorizer.category_for_atom("include-only"), "gnumarus")
+	_check_eq("include-only tint", colorizer.category_for_atom("include-only"), "gdlisp")
 
 
 ## Replicates the engine draw walk over one line map: entries apply in
@@ -1364,7 +1364,7 @@ func _engine_color(p_map: Dictionary, p_col: int, p_default: Color) -> Color:
 	return color
 
 
-## Tests of Gnumarus source coloring: rainbow depths, indent levels,
+## Tests of GDLisp source coloring: rainbow depths, indent levels,
 ## strings, GDScript word classes (keyword vs control flow, base and engine
 ## types, global functions, get/set, annotations), numbers, errors, theme
 ## injection and state carrying.
@@ -1388,7 +1388,7 @@ func _test_highlighter() -> void:
 	_check_eq("highlight keyword value", colorizer.color_for_atom("true"), defaults["keyword"])
 	_check_eq("highlight plain color", maps[0][6]["color"], defaults["text"])
 	_check_eq("highlight plain category", colorizer.category_for_atom("my_var"), "")
-	# Control-flow keywords keep their own red, Gnumarus extras included.
+	# Control-flow keywords keep their own red, GDLisp extras included.
 	_check_eq("highlight control if", colorizer.category_for_atom("if"), "control_flow")
 	_check_eq("highlight control while", colorizer.category_for_atom("while"), "control_flow")
 	_check_eq("highlight control return", colorizer.category_for_atom("return"), "control_flow")
@@ -1399,18 +1399,18 @@ func _test_highlighter() -> void:
 	_check_eq("highlight control color", colorizer.color_for_atom("if"), defaults["control_flow"])
 	var flow: Array = colorizer.compute_all(PackedStringArray(["(if x (pass))"]))
 	_check_eq("highlight control line", flow[0][1]["color"], defaults["control_flow"])
-	# Gnumarus-only operations carry their own lime tint, never GDScript reds.
-	_check_eq("highlight gdl defmacro", colorizer.category_for_atom("defmacro"), "gnumarus")
-	_check_eq("highlight gdl join", colorizer.category_for_atom("join"), "gnumarus")
-	_check_eq("highlight gdl class-name", colorizer.category_for_atom("class-name"), "gnumarus")
-	_check_eq("highlight gdl dict-lua", colorizer.category_for_atom("dict-lua"), "gnumarus")
-	_check_eq("highlight gdl call", colorizer.category_for_atom("call"), "gnumarus")
-	_check_eq("highlight gdl lambda", colorizer.category_for_atom("lambda"), "gnumarus")
-	_check_eq("highlight gdl tint", colorizer.color_for_atom("call"), defaults["gnumarus"])
-	_check_eq("highlight gnumarus default", defaults["gnumarus"], Color(0.6, 1.0, 0.35))
+	# GDLisp-only operations carry their own lime tint, never GDScript reds.
+	_check_eq("highlight gdl defmacro", colorizer.category_for_atom("defmacro"), "gdlisp")
+	_check_eq("highlight gdl join", colorizer.category_for_atom("join"), "gdlisp")
+	_check_eq("highlight gdl class-name", colorizer.category_for_atom("class-name"), "gdlisp")
+	_check_eq("highlight gdl dict-lua", colorizer.category_for_atom("dict-lua"), "gdlisp")
+	_check_eq("highlight gdl call", colorizer.category_for_atom("call"), "gdlisp")
+	_check_eq("highlight gdl lambda", colorizer.category_for_atom("lambda"), "gdlisp")
+	_check_eq("highlight gdl tint", colorizer.color_for_atom("call"), defaults["gdlisp"])
+	_check_eq("highlight gdlisp default", defaults["gdlisp"], Color(0.6, 1.0, 0.35))
 	var call_line: Array = colorizer.compute_all(PackedStringArray(["(call f x)"]))
-	_check_eq("highlight line gnumarus", call_line[0][1]["color"], defaults["gnumarus"])
-	_check_eq("highlight line gnumarus gap", call_line[0][5]["color"], defaults["text"])
+	_check_eq("highlight line gdlisp", call_line[0][1]["color"], defaults["gdlisp"])
+	_check_eq("highlight line gdlisp gap", call_line[0][5]["color"], defaults["text"])
 	# Hyphen segments keep faithful colors ("template" is no operation on
 	# its own, so it stays text gray while "set" keeps function blue).
 	var split_set: Array = colorizer.compute_all(PackedStringArray(["(template-set a 1)"]))
@@ -1442,8 +1442,8 @@ func _test_highlighter() -> void:
 	_check_eq("highlight line number", typed[0][13]["color"], defaults["number"])
 	var extends_line: Array = colorizer.compute_all(PackedStringArray(["(extends Node)"]))
 	_check_eq("highlight line engine type", extends_line[0][9]["color"], defaults["engine_type"])
-	# Lowercase array is the Gnumarus operation, not the GDScript type.
-	_check_eq("highlight array op", colorizer.category_for_atom("array"), "gnumarus")
+	# Lowercase array is the GDLisp operation, not the GDScript type.
+	_check_eq("highlight array op", colorizer.category_for_atom("array"), "gdlisp")
 	# No color leaks right: gaps between atoms use the text gray.
 	var gap: Array = colorizer.compute_all(PackedStringArray(["(static-var instance_count int = 0)"]))
 	_check_eq("highlight gap head", gap[0][1]["color"], defaults["keyword"])
@@ -1533,7 +1533,7 @@ func _test_highlighter() -> void:
 	# Highlighter implementation without editor (null proxy: no TextEdit,
 	# theme sync stays a no-op and line queries come back empty).
 	var impl: RefCounted = HighlighterImplScript.new(null)
-	_check_eq("highlight impl name", impl._get_name(), "Gnumarus 3.8")
+	_check_eq("highlight impl name", impl._get_name(), "GDLisp 3.8")
 	_check_eq("highlight impl langs", impl._get_supported_languages(), PackedStringArray(["gdl"]))
 	_check("highlight impl no editor", impl._get_line_syntax_highlighting(0).is_empty(), "")
 	impl.sync_theme()
