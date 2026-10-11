@@ -108,6 +108,8 @@ com mensagem em portugues.
 | `(ternary c a b)` | `a if c else b` (statement, valor e operando) |
 | `(unpack-arr-safe arr (specs...))` | declara um `var` por spec (mesmas 5 formas do `var`, sem o head) + `var arr_size_N = arr.size()` (N deterministico, por transpilacao) + um `if size > i: nome = arr[i]` por indice (so statement) |
 | `(unpack-arr arr (specs...))` | variante otimista: um `var decl = arr[i]` por spec (so as 3 formas sem default; `=`/`:=` e erro), sem snapshot nem guards — arrays curtos ou tipos errados falham em runtime (so statement) |
+| `(unpack-dict-safe dict (specs...))` | declara um `var` por spec (formas do `var` com chave explicita em 2o slot) + guard `if dict:` com um `if k in dict:` por spec + guards `is_instance_of` para tipados via scratch `dict_tmp_N` (so statement) |
+| `(unpack-dict dict (specs...))` | variante otimista: um `var decl = dict[k]` por spec (so `(n k)`/`(n k T)`; defaults proibidos), sem guards (so statement) |
 | `(include caminho)` | some: colado pelas formas de topo do arquivo (qualquer posicao) |
 | `(block nome corpo...)` | declara/some: vira o corpo colado (pai sozinho ou apos override) |
 | `(template-extends caminho)` | primeira forma do filho: herda e sobrescreve blocos do pai |
@@ -193,7 +195,11 @@ explicito leem via scratch `arr_tmp_N` (so emitido quando ha ao menos um
 spec tipado) e so atribuem dentro de `is_instance_of(tmp, check)`, com
 `check` vindo da tabela `VARIANT_TYPE_CONSTS` (nomes canonicos do
 `Variant::get_type_name` → `TYPE_*`, resto passa bruto); sem tipo e `:=`
-atribuem direto.
+atribuem direto. Os de dict (`unpack-dict-safe`/`unpack-dict`) seguem o
+mesmo molde com chave explicita em segundo slot (`(n k)`, `(n k T)`,
+`(n k = v)`...; a chave e atomo verbatim, empacotar strings); a safe
+troca o snapshot de tamanho por um guard externo `if dict:` + um
+`if k in dict:` por spec (sem tipados, sem scratch).
 
 Anotacoes: atomos `@` lideres apos o operador, um por linha verbatim no
 mesmo indent (com parametros empacota-se: `"@export_range(0, 100)"`);

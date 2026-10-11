@@ -75,6 +75,10 @@ func _init() -> void:
 	_test_unpack_errors()
 	_test_unpack_arr_forms()
 	_test_unpack_arr_errors()
+	_test_unpack_dict_safe_forms()
+	_test_unpack_dict_safe_errors()
+	_test_unpack_dict_forms()
+	_test_unpack_dict_errors()
 	_test_includes()
 	_test_templates()
 	_test_macros()
@@ -992,6 +996,95 @@ func _test_unpack_arr_errors() -> void:
 		_check("unpack-arr error: %s" % c, r["ok"] == false, str(r))
 
 
+## Tests of (unpack-dict-safe ...): keyed declarations, null guard,
+## membership checks and type guards.
+func _test_unpack_dict_safe_forms() -> void:
+	_check_transpiles("unpack-dict-safe single",
+		"(unpack-dict-safe mydict ((a \"'id'\")))",
+		"var a\nif mydict:\n\tif 'id' in mydict:\n\t\ta = mydict['id']\n")
+	_check_transpiles("unpack-dict-safe int key",
+		"(unpack-dict-safe mydict ((n 0 int)))",
+		"var n: int\nvar mydict_tmp_0\nif mydict:\n\tif 0 in mydict:\n\t\tmydict_tmp_0 = mydict[0]\n\t\tif is_instance_of(mydict_tmp_0, TYPE_INT):\n\t\t\tn = mydict_tmp_0\n")
+	# Native classes pass through raw (no TYPE_*).
+	_check_transpiles("unpack-dict-safe custom class",
+		"(unpack-dict-safe mydict ((b \"'o'\" Node)))",
+		"var b: Node\nvar mydict_tmp_0\nif mydict:\n\tif 'o' in mydict:\n\t\tmydict_tmp_0 = mydict['o']\n\t\tif is_instance_of(mydict_tmp_0, Node):\n\t\t\tb = mydict_tmp_0\n")
+	# := specs keep defaults on mismatch without any check.
+	_check_transpiles("unpack-dict-safe inference",
+		"(unpack-dict-safe mydict ((e \"'k'\" := 1)))",
+		"var e := 1\nif mydict:\n\tif 'k' in mydict:\n\t\te = mydict['k']\n")
+	# Without typed specs there is no scratch variable at all.
+	_check_transpiles("unpack-dict-safe no tmp",
+		"(unpack-dict-safe mydict ((a \"'id'\")))",
+		"var a\nif mydict:\n\tif 'id' in mydict:\n\t\ta = mydict['id']\n")
+
+
+## Tests of invalid (unpack-dict-safe ...) forms: every one must fail.
+func _test_unpack_dict_safe_errors() -> void:
+	# Bare forms rejected by the facade (ok must be false).
+	var cases: Array = [
+		"(unpack-dict-safe)",
+		"(unpack-dict-safe mydict)",
+		"(unpack-dict-safe mydict ((a \"'id'\")) extra)",
+		"(unpack-dict-safe (a) ((b \"'k'\")))",
+		"(unpack-dict-safe mydict ())",
+		"(unpack-dict-safe mydict a)",
+		"(unpack-dict-safe mydict (a))",
+		"(unpack-dict-safe mydict ((a)))",
+		"(unpack-dict-safe mydict ((a \"\")))",
+		"(unpack-dict-safe mydict ((a (call f))))",
+		"(unpack-dict-safe mydict ((a \"'k'\" T extra)))",
+		"(unpack-dict-safe mydict ((a \"'k'\" int := 5)))",
+		"(unpack-dict-safe (call f) ((a \"'k'\")))",
+		"(var x = (unpack-dict-safe mydict ((a \"'k'\"))))",
+		"(func f () (return (unpack-dict-safe mydict ((a \"'k'\")))))",
+	]
+	for c in cases:
+		# Facade result, expected to fail.
+		var r: Dictionary = FacadeScript.transpile_text(c)
+		_check("unpack-dict-safe error: %s" % c, r["ok"] == false, str(r))
+
+
+## Tests of (unpack-dict ...): optimistic single-line keyed unpacking.
+func _test_unpack_dict_forms() -> void:
+	_check_transpiles("unpack-dict single",
+		"(unpack-dict mydict ((a \"'id'\")))",
+		"var a = mydict['id']\n")
+	_check_transpiles("unpack-dict shapes",
+		"(unpack-dict mydict ((a \"'id'\") (c \"'age'\" int) (n 0)))",
+		"var a = mydict['id']\nvar c: int = mydict['age']\nvar n = mydict[0]\n")
+	# Inside a function body the declarations indent one level deeper.
+	_check_transpiles("unpack-dict local",
+		"(func f (mydict) (unpack-dict mydict ((c \"'age'\" int))))",
+		"func f(mydict):\n\tvar c: int = mydict['age']\n")
+
+
+## Tests of invalid (unpack-dict ...) forms: every one must fail.
+func _test_unpack_dict_errors() -> void:
+	# Bare forms rejected by the facade (ok must be false).
+	var cases: Array = [
+		"(unpack-dict)",
+		"(unpack-dict mydict)",
+		"(unpack-dict mydict ((a \"'id'\")) extra)",
+		"(unpack-dict (a) ((b \"'k'\")))",
+		"(unpack-dict mydict ())",
+		"(unpack-dict mydict a)",
+		"(unpack-dict mydict (a))",
+		"(unpack-dict mydict ((a)))",
+		"(unpack-dict mydict ((a \"\")))",
+		"(unpack-dict mydict ((d \"'k'\" = 5)))",
+		"(unpack-dict mydict ((d \"'k'\" := 5)))",
+		"(unpack-dict mydict ((d \"'k'\" T = 5)))",
+		"(unpack-dict mydict ((d \"'k'\" T 5)))",
+		"(unpack-dict (call f) ((a \"'k'\")))",
+		"(var x = (unpack-dict mydict ((a \"'k'\"))))",
+	]
+	for c in cases:
+		# Facade result, expected to fail.
+		var r: Dictionary = FacadeScript.transpile_text(c)
+		_check("unpack-dict error: %s" % c, r["ok"] == false, str(r))
+
+
 ## Tests of file inclusion: splicing, nesting, diamonds, cycles, depth,
 ## path kinds, usage errors and the transpiler dangling guard.
 func _test_includes() -> void:
@@ -1655,7 +1748,7 @@ func _test_highlighter() -> void:
 ## End to end tests: .gdl -> code identical to the expected .gd.
 func _test_end_to_end() -> void:
 	# Fixture cases (base file names under TESTS_DIR).
-	var cases: Array = ["Test1", "Test2", "Test3", "Test4", "Test5", "Test6", "Test7", "Test8", "StressTest"]
+	var cases: Array = ["Test1", "Test2", "Test3", "Test4", "Test5", "Test6", "Test7", "Test8", "Test9", "Test10", "StressTest"]
 	for c in cases:
 		# Lisp input text read from the .gdl file.
 		var gdl: String = FileAccess.get_file_as_string(TESTS_DIR + "/" + c + ".gdl")
@@ -1677,7 +1770,7 @@ func _test_end_to_end() -> void:
 func _test_transpiler_errors() -> void:
 	# Transpiler instance holding the v1 operation table.
 	var transpiler: RefCounted = TranspilerScript.new()
-	_check("transpiler: 76 registered operations", transpiler.operation_names().size() == 76, str(transpiler.operation_names()))
+	_check("transpiler: 78 registered operations", transpiler.operation_names().size() == 78, str(transpiler.operation_names()))
 	# Unknown operation must fail, not invent output.
 	var r1: Dictionary = FacadeScript.transpile_text("(foo bar)")
 	_check("transpiler error: unknown operation", r1["ok"] == false, str(r1))

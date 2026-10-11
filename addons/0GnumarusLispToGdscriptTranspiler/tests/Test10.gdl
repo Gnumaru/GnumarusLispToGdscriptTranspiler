@@ -1,0 +1,4 @@
+(class-name UnpackDictPlain)
+(extends Node)
+(func demo (mydict)
+	(unpack-dict mydict ((a "'id'") (c "'age'" int))))

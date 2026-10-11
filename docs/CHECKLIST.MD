@@ -17,6 +17,12 @@ Legenda: `[x]` feito, `[ ]` pendente/futuro.
 - [x] 11. Validacao — importar o projeto headless, rodar o TestRunner e checar `--check-only` nos `.gd` gerados/esperados.
 - [x] 12. Documentacao — comentarios `##`/`#` em toda classe, funcao e variavel.
 
+## Revisao v3.26 — `unpack-dict-safe` + `unpack-dict` (operacoes 77-78)
+
+- [x] 168. `_parse_dict_spec` (chave explicita obrigatoria; chave atomo verbatim + resto via `_emit_plain_variable`) + `_emit_unpack_dict_safe` (guard `if dict:` + `if k in dict` por spec + scratch `dict_tmp_N` com o contador compartilhado, so com tipados) e `_emit_unpack_dict` (uma linha `var decl = dict[k]` por spec; defaults proibidos).
+- [x] 169. Testes — fixtures `Test9` (safe: chaves empacotadas/int/custom/misto) e `Test10` (otimista), 4 funcoes novas (formas + 30 erros), contagem 76 → 78; TestRunner 960/960 + `--check-only`.
+- [x] 170. Docs — OPERATIONS (indice 63 normais/78 total + 2 secoes apos `unpack-arr`), IMPLEMENTATION (tabela + nota) e esta entrada.
+
 ## Revisao v3.25 — guards de tipo no `unpack-arr-safe`
 
 - [x] 165. Const `VARIANT_TYPE_CONSTS` (39 nomes canonicos → `TYPE_*`, nomes sondados no 4.7.2) + leitura via scratch `arr_tmp_N` (mesmo contador do size; so emitido com spec tipado) e guard aninhado `is_instance_of(tmp, check)` (resto passa bruto); sem tipo e `:=` atribuem direto.

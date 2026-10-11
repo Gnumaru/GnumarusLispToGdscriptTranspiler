@@ -144,6 +144,8 @@ func _init() -> void:
 		"ternary": Callable(self, "_emit_ternary"),
 		"unpack-arr-safe": Callable(self, "_emit_unpack_arr_safe"),
 		"unpack-arr": Callable(self, "_emit_unpack_arr"),
+		"unpack-dict-safe": Callable(self, "_emit_unpack_dict_safe"),
+		"unpack-dict": Callable(self, "_emit_unpack_dict"),
 		"array": Callable(self, "_emit_array"),
 		"dict-lua": Callable(self, "_emit_dict_lua"),
 		"dict-json": Callable(self, "_emit_dict_json"),
@@ -538,6 +540,128 @@ func _emit_unpack_arr(p_form: Array, p_indent: int, _p_context: String) -> Dicti
 			return dres
 		lines.append("%s = %s[%d]" % [dres["code"], arr, idx])
 		idx += 1
+	return _ok("\n".join(lines))
+
+
+## Splits one unpack-dict spec into its key and var-shaped declaration.
+## Specs always carry an explicit key: (n k), (n k T), (n k = v),
+## (n k := v), (n k T = v). Bare atoms and key-less lists are rejected.
+## Returns {"ok", "key": verbatim atom, "decl": Array, "error": String}.
+func _parse_dict_spec(p_spec, p_op: String) -> Dictionary:
+	if not (p_spec is Array) or (p_spec as Array).size() < 2:
+		return {"ok": false, "key": "", "decl": [], "error": "%s specs must be (name key ...) lists with an explicit key (got '%s')" % [p_op, str(p_spec)]}
+	# Key slot: verbatim atom (pack String keys, e.g. "'id'"; ints work bare).
+	var key = (p_spec as Array)[1]
+	if not (key is String) or (key as String).is_empty():
+		return {"ok": false, "key": "", "decl": [], "error": "%s keys must be non-empty atoms (got '%s')" % [p_op, str(key)]}
+	# Declaration slots: name plus everything after the key.
+	var decl: Array = [(p_spec as Array)[0]] + (p_spec as Array).slice(2)
+	return {"ok": true, "key": key, "decl": decl, "error": ""}
+
+
+## Emits safe dictionary unpacking from (unpack-dict-safe DICT (SPEC...)):
+## one `var` declaration per spec (var shapes with an explicit key second:
+## (n k), (n k T), (n k = v), (n k := v), (n k T = v)), then one
+## `if <dict>:` null guard holding one `if <key> in <dict>:` check per spec
+## (missing keys keep the declared default). Specs with an explicit type
+## read through a `<dict>_tmp_<n>` scratch variable (`n` from the shared
+## per-transpilation counter, emitted only when at least one spec is
+## checked) and assign only inside a nested `is_instance_of(<tmp>, <check>)`
+## guard (`TYPE_*` for canonical Variant names, raw atom otherwise);
+## untyped and `:=` specs assign directly. Statement-only: it expands to
+## multiple lines. Valid at any level.
+func _emit_unpack_dict_safe(p_form: Array, p_indent: int, _p_context: String) -> Dictionary:
+	if p_form.size() != 3:
+		return _fail("usage: (unpack-dict-safe dict ((name key) ...)) — e.g. (unpack-dict-safe mydict ((a \"'id'\")))")
+	# Dictionary atom (names the scratch and the keyed reads).
+	var dict = p_form[1]
+	if not (dict is String) or (dict as String).is_empty():
+		return _fail("unpack-dict-safe dict must be a non-empty atom — e.g. (unpack-dict-safe mydict (...))")
+	# Spec list: one keyed declaration per element.
+	var specs = p_form[2]
+	if not (specs is Array) or (specs as Array).is_empty():
+		return _fail("unpack-dict-safe needs a non-empty spec list — e.g. (unpack-dict-safe mydict ((a \"'id'\")))")
+	# Output lines: declarations, then the guard tree.
+	var lines: Array = []
+	# Spec keys, declarations and explicit types, in spec order.
+	var keys: Array = []
+	var names: Array = []
+	var checks: Array = []
+	for spec in specs:
+		# Key and var-shaped declaration slots.
+		var parsed: Dictionary = _parse_dict_spec(spec, "unpack-dict-safe")
+		if not parsed["ok"]:
+			return _fail(str(parsed["error"]))
+		var decl: Array = parsed["decl"]
+		# Declaration line in the exact (var ...) grammar (no accessors).
+		var dres: Dictionary = _emit_plain_variable(decl, p_indent, "unpack-dict-safe", "var")
+		if not dres["ok"]:
+			return dres
+		lines.append(dres["code"])
+		keys.append(parsed["key"])
+		names.append(decl[0])
+		# Explicit type slot: (n k T) and (n k T = v) only (`:=` infers).
+		var check: String = ""
+		if decl.size() == 2 or decl.size() == 4:
+			check = decl[1]
+		checks.append(check)
+	# Scratch variable only when at least one spec is type-checked.
+	var tmpvar: String = ""
+	for check in checks:
+		if not (check as String).is_empty():
+			tmpvar = "%s_tmp_%d" % [dict, _unpack_counter]
+			_unpack_counter += 1
+			break
+	if not tmpvar.is_empty():
+		lines.append("%svar %s" % [_indent_text(p_indent), tmpvar])
+	# Null guard holding one membership check per spec, in order.
+	lines.append("%sif %s:" % [_indent_text(p_indent), dict])
+	for i in range(names.size()):
+		lines.append("%sif %s in %s:" % [_indent_text(p_indent + 1), keys[i], dict])
+		if (checks[i] as String).is_empty():
+			lines.append("%s%s = %s[%s]" % [_indent_text(p_indent + 2), names[i], dict, keys[i]])
+		else:
+			# Type guard: read once into the scratch, assign only on match.
+			var guard: String = VARIANT_TYPE_CONSTS.get(checks[i], checks[i])
+			lines.append("%s%s = %s[%s]" % [_indent_text(p_indent + 2), tmpvar, dict, keys[i]])
+			lines.append("%sif is_instance_of(%s, %s):" % [_indent_text(p_indent + 2), tmpvar, guard])
+			lines.append("%s%s = %s" % [_indent_text(p_indent + 3), names[i], tmpvar])
+	return _ok("\n".join(lines))
+
+
+## Emits optimistic dictionary unpacking from (unpack-dict DICT (SPEC...)):
+## one `var <decl> = <dict>[<key>]` line per spec. Specs use the 2
+## default-less keyed shapes only ((n k), (n k T)); any `=`/`:=` default is
+## a usage error. No null guard and no type checks: missing keys or
+## mistyped values fail at GDScript runtime. Statement-only: it expands to
+## multiple lines. Valid at any level.
+func _emit_unpack_dict(p_form: Array, p_indent: int, _p_context: String) -> Dictionary:
+	if p_form.size() != 3:
+		return _fail("usage: (unpack-dict dict ((name key) ...)) — e.g. (unpack-dict mydict ((a \"'id'\")))")
+	# Dictionary atom (names the keyed reads).
+	var dict = p_form[1]
+	if not (dict is String) or (dict as String).is_empty():
+		return _fail("unpack-dict dict must be a non-empty atom — e.g. (unpack-dict mydict (...))")
+	# Spec list: one keyed declaration per element.
+	var specs = p_form[2]
+	if not (specs is Array) or (specs as Array).is_empty():
+		return _fail("unpack-dict needs a non-empty spec list — e.g. (unpack-dict mydict ((a \"'id'\")))")
+	# Output lines, one initialized declaration per spec.
+	var lines: Array = []
+	for spec in specs:
+		# Key and var-shaped declaration slots.
+		var parsed: Dictionary = _parse_dict_spec(spec, "unpack-dict")
+		if not parsed["ok"]:
+			return _fail(str(parsed["error"]))
+		var decl: Array = parsed["decl"]
+		# Defaults are forbidden: values always come straight from the dict.
+		if decl.slice(1).has("=") or decl.slice(1).has(":="):
+			return _fail("unpack-dict forbids default values (got '%s'): values always come from the dict — usages: (unpack-dict d ((n k) (m j T)))" % str(spec))
+		# Declaration line in the exact (var ...) grammar, then the read.
+		var dres: Dictionary = _emit_plain_variable(decl, p_indent, "unpack-dict", "var")
+		if not dres["ok"]:
+			return dres
+		lines.append("%s = %s[%s]" % [dres["code"], dict, parsed["key"]])
 	return _ok("\n".join(lines))
 
 

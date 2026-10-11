@@ -1,6 +1,6 @@
 # OPERATIONS.md — GDLisp → GDScript transpiler operations
 
-Reference for all 76 implemented operations: name, description, where
+Reference for all 78 implemented operations: name, description, where
 each form may appear, where using it is invalid, and usage examples with
 the produced GDScript output. Every example below was executed on the
 transpiler (or is a fixture compared byte for byte by the suite).
@@ -24,12 +24,12 @@ transpiler (or is a fixture compared byte for byte by the suite).
 
 ## 0. Operation index
 
-All 76 operations with a one-line description. Normal operations emit
+All 78 operations with a one-line description. Normal operations emit
 GDScript directly; special operations vanish before transpilation
 (template structure resolved in the include/inheritance phases, macro
 forms expanded in the macro phase).
 
-### Normal transpilation operations (61 — emit GDScript)
+### Normal transpilation operations (63 — emit GDScript)
 
 | Operation | Short description |
 |---|---|
@@ -91,6 +91,8 @@ forms expanded in the macro phase).
 | `ternary` | `a if cond else b` expression. |
 | `unpack-arr-safe` | Safe array unpacking: bounds + type-checked assignments. |
 | `unpack-arr` | Optimistic array unpacking: initialized declarations, no checks. |
+| `unpack-dict-safe` | Safe dict unpacking: null + membership + type-checked assignments. |
+| `unpack-dict` | Optimistic dict unpacking: initialized declarations, no checks. |
 | `array` | Array literal. |
 | `dict-lua` | Lua-style dict (`key = value`). |
 | `dict-json` | JSON-style dict (`key: value`). |
@@ -320,6 +322,81 @@ Invalid (defaults are forbidden):
 - **Where allowed**: any level (`top`, `member`, `local`).
 - **Where invalid**: as a value; empty spec list; non-atom array; any
   default (`=`, `:=`); `@` annotations and `get`/`set` accessors.
+
+### `unpack-dict-safe` — `(unpack-dict-safe dict ((name key) ...))`
+
+Safe dictionary unpacking: one `var` declaration per spec (the `var`
+shapes with an explicit key second: `(n k)`, `(n k T)`, `(n k = v)`,
+`(n k := v)`, `(n k T = v)`), then one `if <dict>:` null guard holding
+one `if <key> in <dict>:` membership check per spec (missing keys keep
+the declared default). Keys are verbatim atoms (pack String keys, e.g.
+`(a "'id'")`; ints work bare: `(n 0 int)`). Like `unpack-arr-safe`,
+specs with an explicit type read through a `<dict>_tmp_<n>` scratch
+variable (shared per-transpilation counter, only when checked) and
+assign only inside `is_instance_of(<tmp>, <check>)`; untyped and `:=`
+specs assign directly.
+Example:
+
+```lisp
+(unpack-dict-safe mydict ((a "'id'") (c "'age'" int)))
+```
+
+```gdscript
+var a
+var c: int
+var mydict_tmp_0
+if mydict:
+	if 'id' in mydict:
+		a = mydict['id']
+	if 'age' in mydict:
+		mydict_tmp_0 = mydict['age']
+		if is_instance_of(mydict_tmp_0, TYPE_INT):
+			c = mydict_tmp_0
+```
+
+Invalid (specs require an explicit key):
+
+```lisp
+(unpack-dict-safe mydict (a))
+```
+
+> `transpiler: unpack-dict-safe specs must be (name key ...) lists with an explicit key (got 'a')`
+
+- **Where allowed**: any level (`top`, `member`, `local`).
+- **Where invalid**: as a value; empty spec list; non-atom dict; bare
+  atoms or key-less lists; empty/non-atom keys; `@` annotations and
+  `get`/`set` accessors in specs.
+
+### `unpack-dict` — `(unpack-dict dict ((name key) ...))`
+
+Optimistic counterpart of `unpack-dict-safe`: one initialized
+declaration per spec (`var a = d['id']`), with no null guard and no
+checks. Only the 2 default-less keyed shapes (`(n k)`, `(n k T)`); any
+`=`/`:=` default is a usage error. Missing keys or mistyped values fail
+at GDScript runtime.
+Example:
+
+```lisp
+(unpack-dict mydict ((a "'id'") (c "'age'" int)))
+```
+
+```gdscript
+var a = mydict['id']
+var c: int = mydict['age']
+```
+
+Invalid (defaults are forbidden):
+
+```lisp
+(unpack-dict mydict ((d "'k'" = 5)))
+```
+
+> `transpiler: unpack-dict forbids default values (got '["d", "\'k\'", "=", "5"]'): values always come from the dict — usages: (unpack-dict d ((n k) (m j T)))`
+
+- **Where allowed**: any level (`top`, `member`, `local`).
+- **Where invalid**: as a value; empty spec list; non-atom dict; bare
+  atoms or key-less lists; any default (`=`, `:=`); `@` annotations
+  and `get`/`set` accessors.
 
 ### `comment` — `(comment text...)`
 

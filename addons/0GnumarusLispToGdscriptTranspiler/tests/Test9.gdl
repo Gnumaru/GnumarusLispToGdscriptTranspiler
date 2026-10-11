@@ -1,0 +1,5 @@
+(class-name UnpackDictDemo)
+(extends Node)
+(func demo (mydict other)
+	(unpack-dict-safe mydict ((a "'id'") (b "'tags'") (c "'age'" int) (d "'score'" float = 0.0)))
+	(unpack-dict-safe other ((x "'x'"))))
