@@ -79,6 +79,8 @@ func _init() -> void:
 	_test_unpack_dict_safe_errors()
 	_test_unpack_dict_forms()
 	_test_unpack_dict_errors()
+	_test_pipe_forms()
+	_test_pipe_errors()
 	_test_includes()
 	_test_templates()
 	_test_macros()
@@ -1085,6 +1087,60 @@ func _test_unpack_dict_errors() -> void:
 		_check("unpack-dict error: %s" % c, r["ok"] == false, str(r))
 
 
+## Tests of (pipe ...): accumulator declaration plus threaded calls,
+## accumulator first by default and last with a true flag.
+func _test_pipe_forms() -> void:
+	_check_transpiles("pipe bare",
+		"(pipe r v (f))",
+		"var r = v\nr = f(r)\n")
+	_check_transpiles("pipe prepend",
+		"(pipe r v ((f 1 2)))",
+		"var r = v\nr = f(r, 1, 2)\n")
+	_check_transpiles("pipe false flag",
+		"(pipe r v (((f 1) false)))",
+		"var r = v\nr = f(r, 1)\n")
+	_check_transpiles("pipe append",
+		"(pipe r v (((f 1 2) true)))",
+		"var r = v\nr = f(1, 2, r)\n")
+	# Flag with no extra arguments still threads the accumulator.
+	_check_transpiles("pipe flag bare call",
+		"(pipe r v (((f) true)))",
+		"var r = v\nr = f(r)\n")
+	# Seed and arguments take the full value/expression range.
+	_check_transpiles("pipe seed call",
+		"(pipe r (call f) ((g (call h 1))))",
+		"var r = f()\nr = g(r, h(1))\n")
+	# Inside a function body the lines indent one level deeper.
+	_check_transpiles("pipe local",
+		"(func f (v) (pipe r v (((g 1) true))))",
+		"func f(v):\n\tvar r = v\n\tr = g(1, r)\n")
+
+
+## Tests of invalid (pipe ...) forms: every one must fail.
+func _test_pipe_errors() -> void:
+	# Bare forms rejected by the facade (ok must be false).
+	var cases: Array = [
+		"(pipe)",
+		"(pipe r)",
+		"(pipe r v)",
+		"(pipe r v (f) extra)",
+		"(pipe (r) v (f))",
+		"(pipe \"\" v (f))",
+		"(pipe r v ())",
+		"(pipe r v stages)",
+		"(pipe r v (()))",
+		"(pipe r v (((f 1) x)))",
+		"(pipe r v (((f 1) true extra)))",
+		"(pipe r v ((((f 1)))))",
+		"(var x = (pipe r v (f)))",
+		"(func f () (return (pipe r v (f))))",
+	]
+	for c in cases:
+		# Facade result, expected to fail.
+		var r: Dictionary = FacadeScript.transpile_text(c)
+		_check("pipe error: %s" % c, r["ok"] == false, str(r))
+
+
 ## Tests of file inclusion: splicing, nesting, diamonds, cycles, depth,
 ## path kinds, usage errors and the transpiler dangling guard.
 func _test_includes() -> void:
@@ -1748,7 +1804,7 @@ func _test_highlighter() -> void:
 ## End to end tests: .gdl -> code identical to the expected .gd.
 func _test_end_to_end() -> void:
 	# Fixture cases (base file names under TESTS_DIR).
-	var cases: Array = ["Test1", "Test2", "Test3", "Test4", "Test5", "Test6", "Test7", "Test8", "Test9", "Test10", "StressTest"]
+	var cases: Array = ["Test1", "Test2", "Test3", "Test4", "Test5", "Test6", "Test7", "Test8", "Test9", "Test10", "Test11", "StressTest"]
 	for c in cases:
 		# Lisp input text read from the .gdl file.
 		var gdl: String = FileAccess.get_file_as_string(TESTS_DIR + "/" + c + ".gdl")
@@ -1770,7 +1826,7 @@ func _test_end_to_end() -> void:
 func _test_transpiler_errors() -> void:
 	# Transpiler instance holding the v1 operation table.
 	var transpiler: RefCounted = TranspilerScript.new()
-	_check("transpiler: 78 registered operations", transpiler.operation_names().size() == 78, str(transpiler.operation_names()))
+	_check("transpiler: 79 registered operations", transpiler.operation_names().size() == 79, str(transpiler.operation_names()))
 	# Unknown operation must fail, not invent output.
 	var r1: Dictionary = FacadeScript.transpile_text("(foo bar)")
 	_check("transpiler error: unknown operation", r1["ok"] == false, str(r1))

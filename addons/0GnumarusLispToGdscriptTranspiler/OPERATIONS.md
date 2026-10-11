@@ -1,6 +1,6 @@
 # OPERATIONS.md — GDLisp → GDScript transpiler operations
 
-Reference for all 78 implemented operations: name, description, where
+Reference for all 79 implemented operations: name, description, where
 each form may appear, where using it is invalid, and usage examples with
 the produced GDScript output. Every example below was executed on the
 transpiler (or is a fixture compared byte for byte by the suite).
@@ -24,12 +24,12 @@ transpiler (or is a fixture compared byte for byte by the suite).
 
 ## 0. Operation index
 
-All 78 operations with a one-line description. Normal operations emit
+All 79 operations with a one-line description. Normal operations emit
 GDScript directly; special operations vanish before transpilation
 (template structure resolved in the include/inheritance phases, macro
 forms expanded in the macro phase).
 
-### Normal transpilation operations (63 — emit GDScript)
+### Normal transpilation operations (64 — emit GDScript)
 
 | Operation | Short description |
 |---|---|
@@ -93,6 +93,7 @@ forms expanded in the macro phase).
 | `unpack-arr` | Optimistic array unpacking: initialized declarations, no checks. |
 | `unpack-dict-safe` | Safe dict unpacking: null + membership + type-checked assignments. |
 | `unpack-dict` | Optimistic dict unpacking: initialized declarations, no checks. |
+| `pipe` | Threaded calls: accumulator first by default, last with true. |
 | `array` | Array literal. |
 | `dict-lua` | Lua-style dict (`key = value`). |
 | `dict-json` | JSON-style dict (`key: value`). |
@@ -397,6 +398,43 @@ Invalid (defaults are forbidden):
 - **Where invalid**: as a value; empty spec list; non-atom dict; bare
   atoms or key-less lists; any default (`=`, `:=`); `@` annotations
   and `get`/`set` accessors.
+
+### `pipe` — `(pipe acc seed (stages...))`
+
+Threads an accumulator through calls: one `var acc = seed` declaration
+(seed in the full value range, evaluated once) plus one `acc = f(...)`
+reassignment per stage. Bare names call with the accumulator alone
+(`f` → `acc = f(acc)`); `(f xs...)` prepends it (`acc = f(acc, xs...)`);
+the explicit form `((f xs...))` prepends too, while `((f xs...) true)`
+appends it (`acc = f(xs..., acc)`) and `false` prepends. Stage
+arguments follow the `(call ...)` rules; function names are atoms only.
+Example:
+
+```lisp
+(pipe myres myval (
+	func1
+	(func2 123)
+	((func5 123) true)))
+```
+
+```gdscript
+var myres = myval
+myres = func1(myres)
+myres = func2(myres, 123)
+myres = func5(123, myres)
+```
+
+Invalid (unknown position flag):
+
+```lisp
+(pipe r v (((f 1) x)))
+```
+
+> `transpiler: pipe position flag must be true (accumulator last) or false (accumulator first) (got 'x')`
+
+- **Where allowed**: any level (`top`, `member`, `local`).
+- **Where invalid**: as a value; empty stage list; non-atom accumulator;
+  empty/non-atom function names; non-`true`/`false` flags.
 
 ### `comment` — `(comment text...)`
 

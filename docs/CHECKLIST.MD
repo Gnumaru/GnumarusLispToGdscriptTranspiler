@@ -17,6 +17,12 @@ Legenda: `[x]` feito, `[ ]` pendente/futuro.
 - [x] 11. Validacao — importar o projeto headless, rodar o TestRunner e checar `--check-only` nos `.gd` gerados/esperados.
 - [x] 12. Documentacao — comentarios `##`/`#` em toda classe, funcao e variavel.
 
+## Revisao v3.27 — `pipe` (operacao 79)
+
+- [x] 171. `_parse_pipe_stage` (atomo sozinho, `(f xs)` prepend, `((f xs) [true|false])` explicito; nomes so atomos, args na regra do `call`) + `_emit_pipe` (`var acc = seed` em faixa total + um `acc = f(...)` por stage; so statement; sem estado).
+- [x] 172. Testes — fixture `Test11` (5 formas do exemplo + stubs para `--check-only`), `_test_pipe_forms`/`_test_pipe_errors` (14 erros, inclui flag invalida e uso como valor), contagem 78 → 79; TestRunner 992/992 + `--check-only`.
+- [x] 173. Docs — OPERATIONS (indice 64 normais/79 total + secao apos `unpack-dict`), IMPLEMENTATION (tabela) e esta entrada.
+
 ## Revisao v3.26 — `unpack-dict-safe` + `unpack-dict` (operacoes 77-78)
 
 - [x] 168. `_parse_dict_spec` (chave explicita obrigatoria; chave atomo verbatim + resto via `_emit_plain_variable`) + `_emit_unpack_dict_safe` (guard `if dict:` + `if k in dict` por spec + scratch `dict_tmp_N` com o contador compartilhado, so com tipados) e `_emit_unpack_dict` (uma linha `var decl = dict[k]` por spec; defaults proibidos).

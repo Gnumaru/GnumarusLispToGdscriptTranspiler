@@ -112,6 +112,7 @@ func _init() -> void:
 		"set": Callable(self, "_emit_set_dangling"),
 		"call": Callable(self, "_emit_call"),
 		"chain": Callable(self, "_emit_chain"),
+		"pipe": Callable(self, "_emit_pipe"),
 		"+": Callable(self, "_emit_infix_statement"),
 		"-": Callable(self, "_emit_infix_statement"),
 		"*": Callable(self, "_emit_infix_statement"),
@@ -1771,6 +1772,84 @@ func _emit_chain(p_form: Array, p_indent: int, _p_context: String) -> Dictionary
 	if not r["ok"]:
 		return r
 	return _ok("%s%s" % [_indent_text(p_indent), r["code"]])
+
+
+## Normalizes one pipe stage into [name, args, last]: bare atoms call with
+## the accumulator alone; (f xs...) prepends it; ((f xs...)) is the
+## explicit form, prepending unless the trailing flag is `true` (append).
+## Returns {"ok", "name": String, "args": Array, "last": bool, "error"}.
+func _parse_pipe_stage(p_stage) -> Dictionary:
+	if p_stage is String:
+		if (p_stage as String).is_empty():
+			return {"ok": false, "name": "", "args": [], "last": false, "error": "pipe stages must be non-empty names or (name ...) lists (got '%s')" % str(p_stage)}
+		return {"ok": true, "name": p_stage, "args": [], "last": false, "error": ""}
+	if not (p_stage is Array) or (p_stage as Array).is_empty():
+		return {"ok": false, "name": "", "args": [], "last": false, "error": "pipe stages must be names or (name ...) lists (got '%s')" % str(p_stage)}
+	# Short form: (f xs...) always prepends the accumulator.
+	var head = (p_stage as Array)[0]
+	if head is String:
+		if (head as String).is_empty():
+			return {"ok": false, "name": "", "args": [], "last": false, "error": "pipe function must be a non-empty atom (got '%s')" % str(p_stage)}
+		return {"ok": true, "name": head, "args": (p_stage as Array).slice(1), "last": false, "error": ""}
+	if not (head is Array) or (head as Array).is_empty():
+		return {"ok": false, "name": "", "args": [], "last": false, "error": "pipe stages must be names or (name ...) lists (got '%s')" % str(p_stage)}
+	# Explicit form: ((f xs...) [flag]) with an optional true/false flag.
+	var spec: Array = head
+	var fname = spec[0]
+	if not (fname is String) or (fname as String).is_empty():
+		return {"ok": false, "name": "", "args": [], "last": false, "error": "pipe function must be a non-empty atom (got '%s')" % str(p_stage)}
+	if (p_stage as Array).size() > 2:
+		return {"ok": false, "name": "", "args": [], "last": false, "error": "usage: ((func args...) [true|false]) — e.g. ((func 1) true)"}
+	var last: bool = false
+	if (p_stage as Array).size() == 2:
+		var flag = (p_stage as Array)[1]
+		if not (flag is String) or (flag != "true" and flag != "false"):
+			return {"ok": false, "name": "", "args": [], "last": false, "error": "pipe position flag must be true (accumulator last) or false (accumulator first) (got '%s')" % str(flag)}
+		last = flag == "true"
+	return {"ok": true, "name": fname, "args": spec.slice(1), "last": last, "error": ""}
+
+
+## Emits threaded calls from (pipe ACC SEED (STAGE...)): one
+## `var ACC = SEED` declaration plus one `ACC = f(...)` reassignment per
+## stage, threading the accumulator first (bare names, (f xs...) and
+## ((f xs...)) / ((f xs...) false)) or last (((f xs...) true)). Seeds take
+## the full value range; stage arguments follow the (call ...) rules.
+## Statement-only: it expands to multiple lines. Valid at any level.
+func _emit_pipe(p_form: Array, p_indent: int, _p_context: String) -> Dictionary:
+	if p_form.size() != 4:
+		return _fail("usage: (pipe acc seed (stages...)) — e.g. (pipe r v (f (g 1) ((h 2) true)))")
+	# Accumulator name (declared once, reassigned per stage).
+	var acc = p_form[1]
+	if not (acc is String) or (acc as String).is_empty() or acc == "=" or acc == ":=" or (acc as String).begins_with("@"):
+		return _fail("pipe accumulator must be a non-empty identifier (got '%s')" % str(acc))
+	# Seed value in the full value range (evaluated once, at declaration).
+	var sres: Dictionary = _emit_value(p_form[2], p_indent, "pipe seed")
+	if not sres["ok"]:
+		return sres
+	# Stage list: at least one call, or a plain (var ...) would do.
+	var stages = p_form[3]
+	if not (stages is Array) or (stages as Array).is_empty():
+		return _fail("pipe needs a non-empty stage list — e.g. (pipe r v (f))")
+	# Declaration plus one threaded reassignment per stage.
+	var lines: Array = ["%svar %s = %s" % [_indent_text(p_indent), acc, sres["code"]]]
+	for stage in stages:
+		# Normalized function name, arguments and accumulator position.
+		var parsed: Dictionary = _parse_pipe_stage(stage)
+		if not parsed["ok"]:
+			return _fail(str(parsed["error"]))
+		# Rendered arguments, never wrapped (call parens already group).
+		var rendered: Array = []
+		for arg in (parsed["args"] as Array):
+			var ares: Dictionary = _emit_operand(arg, false, p_indent)
+			if not ares["ok"]:
+				return ares
+			rendered.append(ares["code"])
+		if (parsed["last"] as bool):
+			rendered.append(acc)
+		else:
+			rendered.push_front(acc)
+		lines.append("%s%s = %s(%s)" % [_indent_text(p_indent), acc, parsed["name"], ", ".join(rendered)])
+	return _ok("\n".join(lines))
 
 
 ## Emits an infix/logic statement from (OP ...). Valid at any level.

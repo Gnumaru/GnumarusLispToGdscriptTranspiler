@@ -1,0 +1,14 @@
+(class-name PipeDemo)
+(extends Node)
+(func func1 (x) (return x))
+(func func2 (x y) (return x))
+(func func3 (x y) (return x))
+(func func4 (x y) (return x))
+(func func5 (x y) (return x))
+(func demo (myval)
+	(pipe myres myval (
+		func1
+		(func2 123)
+		((func3 123))
+		((func4 123) false)
+		((func5 123) true))))

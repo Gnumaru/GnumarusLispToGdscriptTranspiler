@@ -110,6 +110,7 @@ com mensagem em portugues.
 | `(unpack-arr arr (specs...))` | variante otimista: um `var decl = arr[i]` por spec (so as 3 formas sem default; `=`/`:=` e erro), sem snapshot nem guards — arrays curtos ou tipos errados falham em runtime (so statement) |
 | `(unpack-dict-safe dict (specs...))` | declara um `var` por spec (formas do `var` com chave explicita em 2o slot) + guard `if dict:` com um `if k in dict:` por spec + guards `is_instance_of` para tipados via scratch `dict_tmp_N` (so statement) |
 | `(unpack-dict dict (specs...))` | variante otimista: um `var decl = dict[k]` por spec (so `(n k)`/`(n k T)`; defaults proibidos), sem guards (so statement) |
+| `(pipe acc seed (stages...))` | `var acc = seed` + um `acc = f(...)` por stage (acumulador primeiro por padrao, por ultimo com flag `true`; args como no `call`; so statement) |
 | `(include caminho)` | some: colado pelas formas de topo do arquivo (qualquer posicao) |
 | `(block nome corpo...)` | declara/some: vira o corpo colado (pai sozinho ou apos override) |
 | `(template-extends caminho)` | primeira forma do filho: herda e sobrescreve blocos do pai |
