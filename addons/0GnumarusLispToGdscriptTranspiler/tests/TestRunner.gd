@@ -73,6 +73,8 @@ func _init() -> void:
 	_test_small_forms()
 	_test_unpack_forms()
 	_test_unpack_errors()
+	_test_unpack_arr_forms()
+	_test_unpack_arr_errors()
 	_test_includes()
 	_test_templates()
 	_test_macros()
@@ -894,7 +896,7 @@ func _test_unpack_forms() -> void:
 		"var a\nvar myarr_size_0 = myarr.size()\nif myarr_size_0 > 0:\n\ta = myarr[0]\n")
 	_check_transpiles("unpack full shapes",
 		"(unpack-arr-safe myarr (a (b) (c int) (d = 5) (e := 6) (f float = 0.5)))",
-		"var a\nvar b\nvar c: int\nvar d = 5\nvar e := 6\nvar f: float = 0.5\nvar myarr_size_0 = myarr.size()\nif myarr_size_0 > 0:\n\ta = myarr[0]\nif myarr_size_0 > 1:\n\tb = myarr[1]\nif myarr_size_0 > 2:\n\tc = myarr[2]\nif myarr_size_0 > 3:\n\td = myarr[3]\nif myarr_size_0 > 4:\n\te = myarr[4]\nif myarr_size_0 > 5:\n\tf = myarr[5]\n")
+		"var a\nvar b\nvar c: int\nvar d = 5\nvar e := 6\nvar f: float = 0.5\nvar myarr_size_0 = myarr.size()\nvar myarr_tmp_0\nif myarr_size_0 > 0:\n\ta = myarr[0]\nif myarr_size_0 > 1:\n\tb = myarr[1]\nif myarr_size_0 > 2:\n\tmyarr_tmp_0 = myarr[2]\n\tif is_instance_of(myarr_tmp_0, TYPE_INT):\n\t\tc = myarr_tmp_0\nif myarr_size_0 > 3:\n\td = myarr[3]\nif myarr_size_0 > 4:\n\te = myarr[4]\nif myarr_size_0 > 5:\n\tmyarr_tmp_0 = myarr[5]\n\tif is_instance_of(myarr_tmp_0, TYPE_FLOAT):\n\t\tf = myarr_tmp_0\n")
 	# Second unpack of the same array takes the next snapshot number.
 	_check_transpiles("unpack counter",
 		"(unpack-arr-safe myarr (a)) (unpack-arr-safe myarr (b))",
@@ -906,7 +908,26 @@ func _test_unpack_forms() -> void:
 	# Inside a function body the guards indent one level deeper.
 	_check_transpiles("unpack local",
 		"(func f () (unpack-arr-safe myarr ((c int))))",
-		"func f():\n\tvar c: int\n\tvar myarr_size_0 = myarr.size()\n\tif myarr_size_0 > 0:\n\t\tc = myarr[0]\n")
+		"func f():\n\tvar c: int\n\tvar myarr_size_0 = myarr.size()\n\tvar myarr_tmp_0\n\tif myarr_size_0 > 0:\n\t\tmyarr_tmp_0 = myarr[0]\n\t\tif is_instance_of(myarr_tmp_0, TYPE_INT):\n\t\t\tc = myarr_tmp_0\n")
+	# Native classes and custom scripts pass through raw (no TYPE_*).
+	_check_transpiles("unpack custom class",
+		"(unpack-arr-safe myarr ((b Node)))",
+		"var b: Node\nvar myarr_size_0 = myarr.size()\nvar myarr_tmp_0\nif myarr_size_0 > 0:\n\tmyarr_tmp_0 = myarr[0]\n\tif is_instance_of(myarr_tmp_0, Node):\n\t\tb = myarr_tmp_0\n")
+	_check_transpiles("unpack myscript class",
+		"(unpack-arr-safe myarr ((b MyCustomScriptName)))",
+		"var b: MyCustomScriptName\nvar myarr_size_0 = myarr.size()\nvar myarr_tmp_0\nif myarr_size_0 > 0:\n\tmyarr_tmp_0 = myarr[0]\n\tif is_instance_of(myarr_tmp_0, MyCustomScriptName):\n\t\tb = myarr_tmp_0\n")
+	# Object maps to its TYPE_* constant like other Variant names.
+	_check_transpiles("unpack object type",
+		"(unpack-arr-safe myarr ((b Object)))",
+		"var b: Object\nvar myarr_size_0 = myarr.size()\nvar myarr_tmp_0\nif myarr_size_0 > 0:\n\tmyarr_tmp_0 = myarr[0]\n\tif is_instance_of(myarr_tmp_0, TYPE_OBJECT):\n\t\tb = myarr_tmp_0\n")
+	# String maps to TYPE_STRING; untyped and := specs assign directly.
+	_check_transpiles("unpack mixed checks",
+		"(unpack-arr-safe myarr (a (s String = \"\\\"hi\\\"\") (e := 6)))",
+		"var a\nvar s: String = \"hi\"\nvar e := 6\nvar myarr_size_0 = myarr.size()\nvar myarr_tmp_0\nif myarr_size_0 > 0:\n\ta = myarr[0]\nif myarr_size_0 > 1:\n\tmyarr_tmp_0 = myarr[1]\n\tif is_instance_of(myarr_tmp_0, TYPE_STRING):\n\t\ts = myarr_tmp_0\nif myarr_size_0 > 2:\n\te = myarr[2]\n")
+	# Without typed specs there is no scratch variable at all.
+	_check_transpiles("unpack no tmp",
+		"(unpack-arr-safe myarr (a (b)))",
+		"var a\nvar b\nvar myarr_size_0 = myarr.size()\nif myarr_size_0 > 0:\n\ta = myarr[0]\nif myarr_size_0 > 1:\n\tb = myarr[1]\n")
 
 
 ## Tests of invalid (unpack-arr-safe ...) forms: every one must fail.
@@ -930,6 +951,45 @@ func _test_unpack_errors() -> void:
 		# Facade result, expected to fail.
 		var r: Dictionary = FacadeScript.transpile_text(c)
 		_check("unpack error: %s" % c, r["ok"] == false, str(r))
+
+
+## Tests of (unpack-arr ...): optimistic single-line unpacking, one
+## initialized declaration per spec, no bounds checks.
+func _test_unpack_arr_forms() -> void:
+	_check_transpiles("unpack-arr single",
+		"(unpack-arr myarr (a))",
+		"var a = myarr[0]\n")
+	_check_transpiles("unpack-arr shapes",
+		"(unpack-arr myarr (a (b) (c int)))",
+		"var a = myarr[0]\nvar b = myarr[1]\nvar c: int = myarr[2]\n")
+	# Inside a function body the declarations indent one level deeper.
+	_check_transpiles("unpack-arr local",
+		"(func f (myarr) (unpack-arr myarr ((c int))))",
+		"func f(myarr):\n\tvar c: int = myarr[0]\n")
+
+
+## Tests of invalid (unpack-arr ...) forms: every one must fail.
+func _test_unpack_arr_errors() -> void:
+	# Bare forms rejected by the facade (ok must be false).
+	var cases: Array = [
+		"(unpack-arr)",
+		"(unpack-arr myarr)",
+		"(unpack-arr myarr (a) extra)",
+		"(unpack-arr (a) (b))",
+		"(unpack-arr myarr ())",
+		"(unpack-arr myarr a)",
+		"(unpack-arr myarr (()))",
+		"(unpack-arr myarr ((d = 5)))",
+		"(unpack-arr myarr ((d := 5)))",
+		"(unpack-arr myarr ((d float = 5)))",
+		"(unpack-arr myarr ((d float 5)))",
+		"(unpack-arr (call f) (a))",
+		"(var x = (unpack-arr myarr (a)))",
+	]
+	for c in cases:
+		# Facade result, expected to fail.
+		var r: Dictionary = FacadeScript.transpile_text(c)
+		_check("unpack-arr error: %s" % c, r["ok"] == false, str(r))
 
 
 ## Tests of file inclusion: splicing, nesting, diamonds, cycles, depth,
@@ -1595,7 +1655,7 @@ func _test_highlighter() -> void:
 ## End to end tests: .gdl -> code identical to the expected .gd.
 func _test_end_to_end() -> void:
 	# Fixture cases (base file names under TESTS_DIR).
-	var cases: Array = ["Test1", "Test2", "Test3", "Test4", "Test5", "Test6", "Test7", "StressTest"]
+	var cases: Array = ["Test1", "Test2", "Test3", "Test4", "Test5", "Test6", "Test7", "Test8", "StressTest"]
 	for c in cases:
 		# Lisp input text read from the .gdl file.
 		var gdl: String = FileAccess.get_file_as_string(TESTS_DIR + "/" + c + ".gdl")
@@ -1617,7 +1677,7 @@ func _test_end_to_end() -> void:
 func _test_transpiler_errors() -> void:
 	# Transpiler instance holding the v1 operation table.
 	var transpiler: RefCounted = TranspilerScript.new()
-	_check("transpiler: 75 registered operations", transpiler.operation_names().size() == 75, str(transpiler.operation_names()))
+	_check("transpiler: 76 registered operations", transpiler.operation_names().size() == 76, str(transpiler.operation_names()))
 	# Unknown operation must fail, not invent output.
 	var r1: Dictionary = FacadeScript.transpile_text("(foo bar)")
 	_check("transpiler error: unknown operation", r1["ok"] == false, str(r1))

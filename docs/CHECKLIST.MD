@@ -17,6 +17,18 @@ Legenda: `[x]` feito, `[ ]` pendente/futuro.
 - [x] 11. Validacao — importar o projeto headless, rodar o TestRunner e checar `--check-only` nos `.gd` gerados/esperados.
 - [x] 12. Documentacao — comentarios `##`/`#` em toda classe, funcao e variavel.
 
+## Revisao v3.25 — guards de tipo no `unpack-arr-safe`
+
+- [x] 165. Const `VARIANT_TYPE_CONSTS` (39 nomes canonicos → `TYPE_*`, nomes sondados no 4.7.2) + leitura via scratch `arr_tmp_N` (mesmo contador do size; so emitido com spec tipado) e guard aninhado `is_instance_of(tmp, check)` (resto passa bruto); sem tipo e `:=` atribuem direto.
+- [x] 166. Testes — fixture `Test7` regenerado (guards em `c`/`f`), 5 casos novos (classe nativa/custom brutas, `Object` → `TYPE_OBJECT`, misto com `:=`, sem tmp); TestRunner 906/906 + `--check-only`.
+- [x] 167. Docs — secao `unpack-arr-safe` no OPERATIONS (exemplo byte-exato), nota no IMPLEMENTATION e esta entrada.
+
+## Revisao v3.24 — `unpack-arr` (operacao 76)
+
+- [x] 162. `_emit_unpack_arr` no transpiler (so as 3 formas sem default; `=`/`:=` rejeitados com erro proprio antes do `_emit_plain_variable`; uma linha `var decl = arr[i]` por spec; sem snapshot nem guards; so statement; array atomo).
+- [x] 163. Testes — fixture `Test8.gdl` → `Test8.gd` (3 shapes + unpack duplo), `_test_unpack_arr_forms`/`_test_unpack_arr_errors` (13 erros, inclui defaults e uso como valor), contagem 75 → 76; TestRunner 896/896 + `--check-only`.
+- [x] 164. Docs — OPERATIONS (indice 61 normais/76 total + secao apos `unpack-arr-safe`), IMPLEMENTATION (tabela + nota) e esta entrada.
+
 ## Revisao v3.23 — `unpack-arr-safe` (operacao 75)
 
 - [x] 159. `_emit_unpack_arr_safe` no transpiler (specs com a gramatica exata do `var` via `_emit_plain_variable`, sem head; `arr_size_N` com `_unpack_counter` zerado em `transpile()`; guards `if size > i` sem hints nas atribuicoes; so statement; array atomo).
@@ -24,7 +36,6 @@ Legenda: `[x]` feito, `[ ]` pendente/futuro.
 - [x] 161. Docs — OPERATIONS (indice 60 normais/75 total + secao apos `const`), IMPLEMENTATION (tabela + paragrafo) e esta entrada.
 
 ## Revisao v3.22 — nome da linguagem (GDLisp)
-
 - [x] 158. Renomeado o nome do formato de "Gnumarus"/"Gnumarus Lisp" para GDLisp em prosa de comentarios e docs (`... transpiler Lisp dialect` vira `... GDLisp dialect`, `Gnumarus-only` vira `GDLisp-only`); strings visiveis (menu `Transpile GDLisp files`, carimbo `BY GDLISP`, dropdown `GDLisp 3.8`, logs `GDLisp:`), chave de cor `gnumarus` → `gdlisp` e testes/fixtures acompanham. Identificadores, caminhos, `author` do `plugin.cfg` e historico de revisoes (nomes atualizados) intactos; TestRunner 847/847 + `--check-only`.
 
 ## Revisao v3.21 — include rastreado (`true`)

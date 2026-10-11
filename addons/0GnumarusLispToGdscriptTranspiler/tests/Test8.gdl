@@ -1,0 +1,5 @@
+(class-name UnpackArrDemo)
+(extends Node)
+(func demo (myarr other)
+	(unpack-arr myarr (a (b) (c int)))
+	(unpack-arr other ((x float))))

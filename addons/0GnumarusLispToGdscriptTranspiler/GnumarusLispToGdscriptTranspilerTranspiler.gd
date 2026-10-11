@@ -25,6 +25,51 @@ const ASSIGN_OPS: Array = ["=", "+=", "-=", "*=", "/=", "%=", "<<=", ">>=", "&="
 ## Collection constructors (usable as statements and values): always multiline
 ## except when empty. Shared by operands, arguments, values and elements.
 const COLLECTION_OPS: Array = ["array", "dict-lua", "dict-json"]
+## Canonical Godot Variant type names (Variant::get_type_name in 4.7.2) to
+## their global TYPE_* constants, for (unpack-arr-safe ...) type guards.
+## Spec types matching a key emit `is_instance_of(tmp, TYPE_*)`; anything
+## else (native classes like Node, custom scripts) passes through raw.
+const VARIANT_TYPE_CONSTS: Dictionary = {
+	"Nil": "TYPE_NIL",
+	"bool": "TYPE_BOOL",
+	"int": "TYPE_INT",
+	"float": "TYPE_FLOAT",
+	"String": "TYPE_STRING",
+	"Vector2": "TYPE_VECTOR2",
+	"Vector2i": "TYPE_VECTOR2I",
+	"Rect2": "TYPE_RECT2",
+	"Rect2i": "TYPE_RECT2I",
+	"Vector3": "TYPE_VECTOR3",
+	"Vector3i": "TYPE_VECTOR3I",
+	"Vector4": "TYPE_VECTOR4",
+	"Vector4i": "TYPE_VECTOR4I",
+	"Plane": "TYPE_PLANE",
+	"Quaternion": "TYPE_QUATERNION",
+	"AABB": "TYPE_AABB",
+	"Basis": "TYPE_BASIS",
+	"Transform2D": "TYPE_TRANSFORM2D",
+	"Transform3D": "TYPE_TRANSFORM3D",
+	"Projection": "TYPE_PROJECTION",
+	"Color": "TYPE_COLOR",
+	"StringName": "TYPE_STRING_NAME",
+	"NodePath": "TYPE_NODE_PATH",
+	"RID": "TYPE_RID",
+	"Object": "TYPE_OBJECT",
+	"Callable": "TYPE_CALLABLE",
+	"Signal": "TYPE_SIGNAL",
+	"Dictionary": "TYPE_DICTIONARY",
+	"Array": "TYPE_ARRAY",
+	"PackedByteArray": "TYPE_PACKED_BYTE_ARRAY",
+	"PackedInt32Array": "TYPE_PACKED_INT32_ARRAY",
+	"PackedInt64Array": "TYPE_PACKED_INT64_ARRAY",
+	"PackedFloat32Array": "TYPE_PACKED_FLOAT32_ARRAY",
+	"PackedFloat64Array": "TYPE_PACKED_FLOAT64_ARRAY",
+	"PackedStringArray": "TYPE_PACKED_STRING_ARRAY",
+	"PackedVector2Array": "TYPE_PACKED_VECTOR2_ARRAY",
+	"PackedVector3Array": "TYPE_PACKED_VECTOR3_ARRAY",
+	"PackedColorArray": "TYPE_PACKED_COLOR_ARRAY",
+	"PackedVector4Array": "TYPE_PACKED_VECTOR4_ARRAY",
+}
 
 
 ## Operation table: Lisp name (String) -> emitter method (Callable).
@@ -98,6 +143,7 @@ func _init() -> void:
 		"enum": Callable(self, "_emit_enum"),
 		"ternary": Callable(self, "_emit_ternary"),
 		"unpack-arr-safe": Callable(self, "_emit_unpack_arr_safe"),
+		"unpack-arr": Callable(self, "_emit_unpack_arr"),
 		"array": Callable(self, "_emit_array"),
 		"dict-lua": Callable(self, "_emit_dict_lua"),
 		"dict-json": Callable(self, "_emit_dict_json"),
@@ -376,12 +422,18 @@ func _emit_plain_variable(p_decl: Array, p_indent: int, p_op: String, p_keyword:
 ## `<arr>_size_<n>` snapshot (`n` from the per-transpilation counter, so
 ## repeated unpacks never collide), then one bounds-checked
 ## `if <size> > <i>:` guard per index (missing elements keep the declared
-## default; assignments never carry type hints). Statement-only: it expands
-## to multiple lines. Valid at any level, like (var ...) and (if ...).
+## default; assignments never carry type hints). Specs with an explicit
+## type also read through a `<arr>_tmp_<n>` scratch variable and only
+## assign inside a nested `is_instance_of(<tmp>, <check>)` guard, where
+## <check> is the TYPE_* constant for canonical Variant names and the raw
+## atom otherwise (native classes, custom scripts); untyped and `:=` specs
+## assign directly. The scratch declaration only emits when at least one
+## spec is type-checked. Statement-only: it expands to multiple lines.
+## Valid at any level, like (var ...) and (if ...).
 func _emit_unpack_arr_safe(p_form: Array, p_indent: int, _p_context: String) -> Dictionary:
 	if p_form.size() != 3:
 		return _fail("usage: (unpack-arr-safe array (specs...)) — e.g. (unpack-arr-safe myarr (a (b int)))")
-	# Array atom (names the size snapshot and the indexed reads).
+	# Array atom (names the snapshot, the scratch and the indexed reads).
 	var arr = p_form[1]
 	if not (arr is String) or (arr as String).is_empty():
 		return _fail("unpack-arr-safe array must be a non-empty atom — e.g. (unpack-arr-safe myarr (...))")
@@ -389,13 +441,17 @@ func _emit_unpack_arr_safe(p_form: Array, p_indent: int, _p_context: String) -> 
 	var specs = p_form[2]
 	if not (specs is Array) or (specs as Array).is_empty():
 		return _fail("unpack-arr-safe needs a non-empty spec list — e.g. (unpack-arr-safe myarr (a (b int)))")
-	# Snapshot variable name, unique per transpilation (deterministic).
-	var sizevar: String = "%s_size_%d" % [arr, _unpack_counter]
+	# Snapshot and scratch names, unique per transpilation (deterministic).
+	var seq: int = _unpack_counter
 	_unpack_counter += 1
-	# Output lines: declarations, then the snapshot, then the guards.
+	var sizevar: String = "%s_size_%d" % [arr, seq]
+	var tmpvar: String = "%s_tmp_%d" % [arr, seq]
+	# Output lines: declarations, then the snapshot (+ scratch when needed).
 	var lines: Array = []
 	# Unpacked variable names, in spec order (position = array index).
 	var names: Array = []
+	# Explicit spec types, in spec order ("" = no runtime check).
+	var checks: Array = []
 	for spec in specs:
 		# Declaration slots: bare atoms stay whole, sublists pass through.
 		var decl: Array = []
@@ -413,12 +469,75 @@ func _emit_unpack_arr_safe(p_form: Array, p_indent: int, _p_context: String) -> 
 			return dres
 		lines.append(dres["code"])
 		names.append(decl[0])
+		# Explicit type slot: (n T) and (n T = v) only (`:=` infers).
+		var check: String = ""
+		if decl.size() == 2 or decl.size() == 4:
+			check = decl[1]
+		checks.append(check)
 	# Size snapshot after the declarations.
 	lines.append("%svar %s = %s.size()" % [_indent_text(p_indent), sizevar, arr])
+	# Scratch variable only when at least one spec is type-checked.
+	var need_tmp: bool = false
+	for check in checks:
+		if not (check as String).is_empty():
+			need_tmp = true
+	if need_tmp:
+		lines.append("%svar %s" % [_indent_text(p_indent), tmpvar])
 	# One bounds-checked assignment per spec, in index order.
 	for i in range(names.size()):
 		lines.append("%sif %s > %d:" % [_indent_text(p_indent), sizevar, i])
-		lines.append("%s%s = %s[%d]" % [_indent_text(p_indent + 1), names[i], arr, i])
+		if (checks[i] as String).is_empty():
+			lines.append("%s%s = %s[%d]" % [_indent_text(p_indent + 1), names[i], arr, i])
+		else:
+			# Type guard: read once into the scratch, assign only on match.
+			var guard: String = VARIANT_TYPE_CONSTS.get(checks[i], checks[i])
+			lines.append("%s%s = %s[%d]" % [_indent_text(p_indent + 1), tmpvar, arr, i])
+			lines.append("%sif is_instance_of(%s, %s):" % [_indent_text(p_indent + 1), tmpvar, guard])
+			lines.append("%s%s = %s" % [_indent_text(p_indent + 2), names[i], tmpvar])
+	return _ok("\n".join(lines))
+
+
+## Emits optimistic array unpacking from (unpack-arr ARR (SPEC...)): one
+## `var <decl> = <arr>[<i>]` line per spec. Specs use the 3 default-less
+## (var ...) shapes only (bare atom, (n), (n T)); any `=`/`:=` default is a
+## usage error. No size snapshot and no bounds checks: short arrays or
+## mistyped elements fail at GDScript runtime. Statement-only: it expands
+## to multiple lines. Valid at any level.
+func _emit_unpack_arr(p_form: Array, p_indent: int, _p_context: String) -> Dictionary:
+	if p_form.size() != 3:
+		return _fail("usage: (unpack-arr array (specs...)) — e.g. (unpack-arr myarr (a (b int)))")
+	# Array atom (names the indexed reads).
+	var arr = p_form[1]
+	if not (arr is String) or (arr as String).is_empty():
+		return _fail("unpack-arr array must be a non-empty atom — e.g. (unpack-arr myarr (...))")
+	# Spec list: one default-less declaration per element.
+	var specs = p_form[2]
+	if not (specs is Array) or (specs as Array).is_empty():
+		return _fail("unpack-arr needs a non-empty spec list — e.g. (unpack-arr myarr (a (b int)))")
+	# Output lines, one initialized declaration per spec.
+	var lines: Array = []
+	# Array index of the current spec (position = index).
+	var idx: int = 0
+	for spec in specs:
+		# Declaration slots: bare atoms stay whole, sublists pass through.
+		var decl: Array = []
+		if spec is String:
+			if (spec as String).is_empty():
+				return _fail("unpack-arr spec name must be a non-empty identifier")
+			decl = [spec]
+		elif spec is Array and not (spec as Array).is_empty():
+			decl = spec
+		else:
+			return _fail("unpack-arr specs must be names or (name ...) lists (got '%s')" % str(spec))
+		# Defaults are forbidden: values always come straight from the array.
+		if decl.slice(1).has("=") or decl.slice(1).has(":="):
+			return _fail("unpack-arr forbids default values (got '%s'): values always come from the array — usages: (unpack-arr arr (n (m T)))" % str(spec))
+		# Declaration line in the exact (var ...) grammar, then the read.
+		var dres: Dictionary = _emit_plain_variable(decl, p_indent, "unpack-arr", "var")
+		if not dres["ok"]:
+			return dres
+		lines.append("%s = %s[%d]" % [dres["code"], arr, idx])
+		idx += 1
 	return _ok("\n".join(lines))
 
 

@@ -1,6 +1,6 @@
 # OPERATIONS.md — GDLisp → GDScript transpiler operations
 
-Reference for all 75 implemented operations: name, description, where
+Reference for all 76 implemented operations: name, description, where
 each form may appear, where using it is invalid, and usage examples with
 the produced GDScript output. Every example below was executed on the
 transpiler (or is a fixture compared byte for byte by the suite).
@@ -24,12 +24,12 @@ transpiler (or is a fixture compared byte for byte by the suite).
 
 ## 0. Operation index
 
-All 75 operations with a one-line description. Normal operations emit
+All 76 operations with a one-line description. Normal operations emit
 GDScript directly; special operations vanish before transpilation
 (template structure resolved in the include/inheritance phases, macro
 forms expanded in the macro phase).
 
-### Normal transpilation operations (60 — emit GDScript)
+### Normal transpilation operations (61 — emit GDScript)
 
 | Operation | Short description |
 |---|---|
@@ -89,7 +89,8 @@ forms expanded in the macro phase).
 | `assert` | `assert(...)` statement. |
 | `breakpoint` | Bare `breakpoint` statement. |
 | `ternary` | `a if cond else b` expression. |
-| `unpack-arr-safe` | Safe array unpacking: per-index bounds-checked assignments. |
+| `unpack-arr-safe` | Safe array unpacking: bounds + type-checked assignments. |
+| `unpack-arr` | Optimistic array unpacking: initialized declarations, no checks. |
 | `array` | Array literal. |
 | `dict-lua` | Lua-style dict (`key = value`). |
 | `dict-json` | JSON-style dict (`key: value`). |
@@ -245,7 +246,13 @@ Emits one `var` declaration per spec, one `<arr>_size_<n>` snapshot (`n`
 from a per-transpilation counter, so repeated unpacks never collide and
 the output stays deterministic), then one `if <size> > <i>:` guard per
 index (missing elements keep the declared default; assignments never
-carry type hints).
+carry type hints). Specs with an explicit type read through a
+`<arr>_tmp_<n>` scratch variable (emitted only when at least one spec is
+checked) and assign only inside a nested
+`is_instance_of(<tmp>, <check>)` guard; `<check>` is the `TYPE_*`
+constant for canonical Variant type names (`int` → `TYPE_INT`,
+`Object` → `TYPE_OBJECT`) and the raw atom otherwise (`Node`, custom
+scripts). Untyped and `:=` specs assign directly.
 Example:
 
 ```lisp
@@ -257,12 +264,17 @@ var a
 var c: int
 var d: float = 9.0
 var myarr_size_0 = myarr.size()
+var myarr_tmp_0
 if myarr_size_0 > 0:
 	a = myarr[0]
 if myarr_size_0 > 1:
-	c = myarr[1]
+	myarr_tmp_0 = myarr[1]
+	if is_instance_of(myarr_tmp_0, TYPE_INT):
+		c = myarr_tmp_0
 if myarr_size_0 > 2:
-	d = myarr[2]
+	myarr_tmp_0 = myarr[2]
+	if is_instance_of(myarr_tmp_0, TYPE_FLOAT):
+		d = myarr_tmp_0
 ```
 
 Invalid (missing `=` before the default, like `var`):
@@ -277,6 +289,37 @@ Invalid (missing `=` before the default, like `var`):
 - **Where invalid**: as a value (`var` default, `return`, argument,
   operand — it expands to multiple lines); empty spec list; non-atom
   array; `@` annotations and `get`/`set` accessors in specs.
+
+### `unpack-arr` — `(unpack-arr arr (specs...))`
+
+Optimistic counterpart of `unpack-arr-safe`: one initialized declaration
+per spec (`var a = arr[0]`, `var c: int = arr[2]`), with no size
+snapshot and no bounds checks. Only the 3 default-less `var` shapes are
+accepted (bare atom, `(n)`, `(n T)`); any `=`/`:=` default is a usage
+error, since values always come straight from the array. Short arrays or
+mistyped elements fail at GDScript runtime.
+Example:
+
+```lisp
+(unpack-arr myarr (a (c int)))
+```
+
+```gdscript
+var a = myarr[0]
+var c: int = myarr[1]
+```
+
+Invalid (defaults are forbidden):
+
+```lisp
+(unpack-arr myarr ((d = 5)))
+```
+
+> `transpiler: unpack-arr forbids default values (got '["d", "=", "5"]'): values always come from the array — usages: (unpack-arr arr (n (m T)))`
+
+- **Where allowed**: any level (`top`, `member`, `local`).
+- **Where invalid**: as a value; empty spec list; non-atom array; any
+  default (`=`, `:=`); `@` annotations and `get`/`set` accessors.
 
 ### `comment` — `(comment text...)`
 
